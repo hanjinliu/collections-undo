@@ -1,9 +1,9 @@
 from unittest.mock import MagicMock
-from undo import CommandStack
+from undo import UndoStack
 
 def test_property():
     class A:
-        stack = CommandStack()
+        stack = UndoStack()
         def __init__(self):
             self._a = 10
 
@@ -39,7 +39,7 @@ def test_property():
 
 def test_stack_independency():
     class A:
-        stack = CommandStack()
+        stack = UndoStack()
         def __init__(self):
             self._a = 10
 
@@ -70,7 +70,7 @@ def test_method():
     mock = MagicMock()
 
     class A:
-        stack = CommandStack()
+        stack = UndoStack()
 
         @stack.command
         def f(self, a):
@@ -91,3 +91,39 @@ def test_method():
     x.stack.undo()
     mock.assert_called_with("undo", x, 5)
     assert x.stack.stack_lengths == (1, 1)
+
+def test_undoable_function():
+    class A:
+        stack = UndoStack()
+
+        def __init__(self):
+            self.ans_add = 0
+            self.ans_sub = 0
+
+        @property
+        def ans(self):
+            return self.ans_add, self.ans_sub
+
+        @stack.function
+        def calc(self, a, b):
+            self.ans_add = a + b
+            self.ans_sub = a - b
+
+        @calc.state_getter
+        def _add_getter(self):
+            return self.ans
+
+        @calc.state_setter
+        def _add_setter(self, val):
+            self.ans_add, self.ans_sub = val
+
+    x = A()
+    x.calc(3, 5)
+    assert x.ans == (8, -2)
+    x.calc(4, 2)
+    assert x.ans == (6, 2)
+    assert x.stack.stack_lengths == (2, 0)
+    x.stack.undo()
+    assert x.ans == (8, -2)
+    x.stack.undo()
+    assert x.ans == (0, 0)

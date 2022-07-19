@@ -1,5 +1,5 @@
 __version__ = "0.0.1"
 
-from ._stack import CommandStack
+from ._stack import UndoStack
 
-__all__ = ["CommandStack"]
+__all__ = ["UndoStack"]

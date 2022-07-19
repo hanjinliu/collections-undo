@@ -1,9 +1,9 @@
-from undo import CommandStack
+from undo import UndoStack
 from unittest.mock import MagicMock
 
 def test_stack_operations():
     mock = MagicMock()
-    stack = CommandStack()
+    stack = UndoStack()
 
     @stack.command
     def a(x, y):
@@ -39,7 +39,7 @@ def test_stack_operations():
     mock.reset_mock()
 
     out = stack.undo()
-    assert out == CommandStack.empty
+    assert out == UndoStack.empty
     assert stack.stack_lengths == (0, 2)
     mock.assert_not_called()
 
@@ -55,13 +55,13 @@ def test_stack_operations():
     mock.reset_mock()
 
     out = stack.redo()
-    assert out == CommandStack.empty
+    assert out == UndoStack.empty
     assert stack.stack_lengths == (2, 0)
     mock.assert_not_called()
 
 def test_repeat():
     mock = MagicMock()
-    stack = CommandStack()
+    stack = UndoStack()
 
     @stack.command
     def a(x, y):
@@ -76,7 +76,7 @@ def test_repeat():
     mock.assert_not_called()
 
     out = stack.repeat()
-    assert out == CommandStack.empty
+    assert out == UndoStack.empty
     mock.assert_not_called()
 
     out = a(1, 2)

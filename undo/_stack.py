@@ -1,11 +1,11 @@
 from __future__ import annotations
 from collections import deque
-from functools import wraps
 from typing import Any, Callable, Iterator, NamedTuple, TYPE_CHECKING
 from dataclasses import dataclass
-from ._command import Command
 from frozenlist import FrozenList
 
+from ._command import Command
+from ._undoable import undoable_function, undoable_property
 
 if TYPE_CHECKING:
     from typing_extensions import Self
@@ -32,6 +32,15 @@ class CommandSet:
         fstr = self.cmd._func_fw.__name__
         return f"{_cmd}<{fstr}({args_str})>"
 
+    def copy(self) -> Self:
+        return type(self)(self.cmd, self.args, self.kwargs)
+
+    def _call_with_callback(self):
+        return self.cmd._call_with_callback(*self.args, **self.kwargs)
+
+    def _call_raw(self):
+        return self.cmd._call_raw(*self.args, **self.kwargs)
+
 
 class LengthPair(NamedTuple):
     undo: int
@@ -46,7 +55,7 @@ class _Empty:
         return "<empty>"
 
 
-class CommandStack:
+class UndoStack:
     empty = _Empty()
     _STACK_MAP: dict[int, Self] = {}
 
@@ -78,7 +87,7 @@ class CommandStack:
         s = "\n".join(f"{s0:>{nchar_max + 2}}, {s1}" for s0, s1 in s)
         return cls_name + f"[\n{s}\n]"
 
-    def __get__(self, obj, objtype=None) -> CommandStack:
+    def __get__(self, obj, objtype=None) -> UndoStack:
         if obj is None:
             return self
         _id = id(obj)
@@ -107,12 +116,11 @@ class CommandStack:
 
     def repeat(self) -> Any:
         """Repeat the last command and update undo/redo stacks."""
+        # BUG: incompatible with undoable_function
         if len(self._stack_undo) == 0:
             return self.empty
         cmdset = self._stack_undo[-1]
-        out = cmdset.cmd._call_raw(*cmdset.args, **cmdset.kwargs)
-        self._stack_undo.append(cmdset)
-        return out
+        return cmdset._call_with_callback()
 
     def run_all(self) -> Any:
         """Run all the command."""
@@ -182,50 +190,6 @@ class CommandStack:
         """Decorator for undoable property construction."""
         return undoable_property(fget, fset, fdel, doc=doc, parent=self)
 
-    # def state_descriptor(self, f: Callable) -> Command:
-
-    #     ...
-
-
-class undoable_property(property):
-    """A property class implemented with undo."""
-
-    def __init__(
-        self, fget=None, fset=None, fdel=None, doc=None, *, parent: CommandStack = None
-    ):
-        self._cmd_stack = parent
-        super().__init__(fget, fset, fdel, doc)
-
-    def getter(self, fget: Callable[[Any], Any], /) -> undoable_property:
-        return undoable_property(
-            fget=fget,
-            fset=self.fset,
-            fdel=self.fdel,
-            doc=self.__doc__,
-            parent=self._cmd_stack,
-        )
-
-    def setter(self, fset: Callable[[Any, Any], None], /) -> undoable_property:
-        @self._cmd_stack.command
-        def fset_cmd(obj, val, old_val):
-            fset(obj, val)
-
-        @fset_cmd.undo_def
-        def fset_cmd(obj, val, old_val):
-            fset(obj, old_val)
-
-        @wraps(fset)
-        def nfset(obj, val):
-            old_val = self.fget(obj)
-            fset_cmd.__get__(obj)(val, old_val)
-
-        return undoable_property(
-            fget=self.fget,
-            fset=nfset,
-            fdel=self.fdel,
-            doc=self.__doc__,
-            parent=self._cmd_stack,
-        )
-
-    def deleter(self, fdel: Callable[[Any], None], /) -> undoable_property:
-        raise TypeError("undoable_property object does not support deleter.")
+    def function(self, f: Callable) -> undoable_function:
+        """Decorator for undoable function construction."""
+        return undoable_function(f, parent=self)
