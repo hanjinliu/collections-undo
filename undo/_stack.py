@@ -1,9 +1,11 @@
 from __future__ import annotations
+from collections import deque
 from functools import wraps
 from typing import Any, Callable, Iterator, NamedTuple, TYPE_CHECKING
 from dataclasses import dataclass
 from ._command import Command
 from frozenlist import FrozenList
+
 
 if TYPE_CHECKING:
     from typing_extensions import Self
@@ -48,16 +50,16 @@ class CommandStack:
     empty = _Empty()
     _STACK_MAP: dict[int, Self] = {}
 
-    def __init__(self, max: int | float = float("inf")):
-        self._stack_undo: list[CommandSet] = []
-        self._stack_redo: list[CommandSet] = []
+    def __init__(self, max: int | None = None):
+        self._stack_undo: deque[CommandSet] = deque(maxlen=max)
+        self._stack_redo: deque[CommandSet] = deque(maxlen=max)
         self._max = max
 
     def __repr__(self):
         cls_name = type(self).__name__
         n_undo, n_redo = self.stack_lengths
-        undo_stack = self._stack_undo
-        redo_stack = self._stack_redo
+        undo_stack = list(self._stack_undo)
+        redo_stack = list(self._stack_redo)
 
         if n_undo < n_redo:
             undo_stack = undo_stack + [None] * (n_redo - n_undo)
@@ -116,7 +118,8 @@ class CommandStack:
         """Run all the command."""
         for cmdset in self._stack_undo:
             out = cmdset.cmd._call_raw(*cmdset.args, **cmdset.kwargs)
-        self._stack_redo = list(reversed(self._stack_undo))
+        self._stack_redo = self._stack_undo.copy()
+        self._stack_redo.reverse()
         return out
 
     def subset(self, start: int, stop: int) -> Self:
@@ -125,12 +128,6 @@ class CommandStack:
         new = type(self)()
         new._stack_undo = s
         return new
-
-    def _check_stack_size(self):
-        if len(self._stack_undo) > self._max:
-            self._stack_undo = self._stack_undo[1:]
-        if len(self._redo_undo) > self._max:
-            self._redo_undo = self._stack_redo[1:]
 
     @property
     def stack_undo(self) -> FrozenList[CommandSet]:
@@ -184,6 +181,10 @@ class CommandStack:
     ) -> undoable_property:
         """Decorator for undoable property construction."""
         return undoable_property(fget, fset, fdel, doc=doc, parent=self)
+
+    # def state_descriptor(self, f: Callable) -> Command:
+
+    #     ...
 
 
 class undoable_property(property):
