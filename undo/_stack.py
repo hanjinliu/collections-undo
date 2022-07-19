@@ -1,5 +1,6 @@
 from __future__ import annotations
-from typing import TYPE_CHECKING, Any, Iterator, NamedTuple
+from functools import wraps
+from typing import Any, Callable, Iterator, NamedTuple, TYPE_CHECKING
 from dataclasses import dataclass
 from ._command import ForwardCommand, Command
 from frozenlist import FrozenList
@@ -27,7 +28,7 @@ class CommandSet:
         _args = list(map(_fmt_arg, self.args))
         _args += list(f"{k}={_fmt_arg(v)}" for k, v in self.kwargs.items())
         args_str = ", ".join(_args)
-        fstr = self.cmd._func.fw.__name__
+        fstr = self.cmd._func_fw.__name__
         return f"{_cmd}<{fstr}({args_str})>"
 
 
@@ -46,6 +47,7 @@ class _Empty:
 
 class CommandStack:
     empty = _Empty()
+    _STACK_MAP: dict[int, Self] = {}
 
     def __init__(self, max: int | float = float("inf")):
         self._stack_undo: list[CommandSet] = []
@@ -74,6 +76,15 @@ class CommandStack:
 
         s = "\n".join(f"{s0:>{nchar_max + 2}}, {s1}" for s0, s1 in s)
         return cls_name + f"[\n{s}\n]"
+
+    def __get__(self, obj, objtype=None) -> CommandStack:
+        if obj is None:
+            return self
+        _id = id(obj)
+        if (stack := self._STACK_MAP.get(_id, None)) is None:
+            stack = type(self)(max=self._max)
+            self._STACK_MAP[_id] = stack
+        return stack
 
     def undo(self) -> Any:
         """Undo last command and update undo/redo stacks."""
@@ -159,13 +170,48 @@ class CommandStack:
         return iter(self._stack_undo)
 
     def command(self, f) -> ForwardCommand:
-        return ForwardCommand(f, callback=self._append_command)
+        return ForwardCommand(f, parent=self)
 
-    # def property(self, fget=None, fset=None, fdel=None, doc=None) -> property:
-    #     ...
+    def property(self, fget=None, fset=None, fdel=None, doc=None) -> undoable_property:
+        return undoable_property(fget, fset, fdel, doc=doc, parent=self)
 
-    # def classmethod(self, func) -> classmethod:
-    #     ...
 
-    # def staticmethod(self, func) -> staticmethod:
-    #     ...
+class undoable_property(property):
+    """A property class implemented with undo."""
+
+    def __init__(
+        self, fget=None, fset=None, fdel=None, doc=None, *, parent: CommandStack = None
+    ):
+        self._cmd_stack = parent
+        super().__init__(fget, fset, fdel, doc)
+
+    def getter(self, fget: Callable[[Any], Any]) -> undoable_property:
+        return undoable_property(
+            fget=fget,
+            fset=self.fset,
+            fdel=self.fdel,
+            doc=self.__doc__,
+            parent=self._cmd_stack,
+        )
+
+    def setter(self, fset):
+        @self._cmd_stack.command
+        def fset_cmd(obj, val, old_val):
+            fset(obj, val)
+
+        @fset_cmd.undo_def
+        def fset_cmd(obj, val, old_val):
+            fset(obj, old_val)
+
+        @wraps(fset)
+        def nfset(obj, val):
+            old_val = self.fget(obj)
+            fset_cmd.__get__(obj)(val, old_val)
+
+        return undoable_property(
+            fget=self.fget,
+            fset=nfset,
+            fdel=self.fdel,
+            doc=self.__doc__,
+            parent=self._cmd_stack,
+        )
