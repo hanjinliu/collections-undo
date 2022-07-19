@@ -19,6 +19,9 @@ setup(
     download_url="https://github.com/hanjinliu/undo",
     packages=find_packages(exclude=["docs", "examples", "rst", "tests", "tests.*"]),
     package_data={"undo": ["**/*.pyi", "*.pyi"]},
-    install_requires=["typing_extensions"],
+    install_requires=[
+        "typing_extensions",
+        "frozenlist",
+    ],
     python_requires=">=3.8",
 )

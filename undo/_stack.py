@@ -1,5 +1,5 @@
 from __future__ import annotations
-from typing import Any, Iterator, NamedTuple
+from typing import TYPE_CHECKING, Any, Iterator, NamedTuple
 from dataclasses import dataclass
 from ._command import ForwardCommand, Command
 from frozenlist import FrozenList
@@ -10,6 +10,10 @@ def _fmt_arg(v: Any) -> str:
     if len(v_repr) > 14:
         v_repr = "#" + type(v).__name__ + "#"
     return v_repr
+
+
+if TYPE_CHECKING:
+    from typing_extensions import Self
 
 
 @dataclass(repr=False)
@@ -32,18 +36,27 @@ class LengthPair(NamedTuple):
     redo: int
 
 
-class CommandStack:
-    empty = object()
+class _Empty:
+    def __repr__(self) -> str:
+        return "<undo.CommandStack.empty>"
 
-    def __init__(self):
-        self._undo_stack: list[CommandSet] = []
-        self._redo_stack: list[CommandSet] = []
+    def __str__(self) -> str:
+        return "<empty>"
+
+
+class CommandStack:
+    empty = _Empty()
+
+    def __init__(self, max: int | float = float("inf")):
+        self._stack_undo: list[CommandSet] = []
+        self._stack_redo: list[CommandSet] = []
+        self._max = max
 
     def __repr__(self):
         cls_name = type(self).__name__
         n_undo, n_redo = self.stack_lengths
-        undo_stack = self._undo_stack
-        redo_stack = self._redo_stack
+        undo_stack = self._stack_undo
+        redo_stack = self._stack_redo
 
         if n_undo < n_redo:
             undo_stack = undo_stack + [None] * (n_redo - n_undo)
@@ -62,56 +75,97 @@ class CommandStack:
         s = "\n".join(f"{s0:>{nchar_max + 2}}, {s1}" for s0, s1 in s)
         return cls_name + f"[\n{s}\n]"
 
-    def undo(self):
-        if len(self._undo_stack) == 0:
+    def undo(self) -> Any:
+        """Undo last command and update undo/redo stacks."""
+        if len(self._stack_undo) == 0:
             return self.empty
-        cmdset = self._undo_stack.pop()
+        cmdset = self._stack_undo.pop()
         out = cmdset.cmd.revert(*cmdset.args, **cmdset.kwargs)
-        self._redo_stack.append(cmdset)
+        self._stack_redo.append(cmdset)
         return out
 
-    def redo(self) -> None:
-        if len(self._redo_stack) == 0:
+    def redo(self) -> Any:
+        """Redo last command and update undo/redo stacks."""
+        if len(self._stack_redo) == 0:
             return self.empty
-        cmdset = self._redo_stack.pop()
+        cmdset = self._stack_redo.pop()
         out = cmdset.cmd.call_raw(*cmdset.args, **cmdset.kwargs)
-        self._undo_stack.append(cmdset)
+        self._stack_undo.append(cmdset)
         return out
+
+    def repeat(self) -> Any:
+        """Repeat the last command and update undo/redo stacks."""
+        if len(self._stack_undo) == 0:
+            return self.empty
+        cmdset = self._stack_undo[-1]
+        out = cmdset.cmd.call_raw(*cmdset.args, **cmdset.kwargs)
+        self._stack_undo.append(cmdset)
+        return out
+
+    def run_all(self) -> Any:
+        """Run all the command."""
+        for cmdset in self._stack_undo:
+            out = cmdset.cmd.call_raw(*cmdset.args, **cmdset.kwargs)
+        self._stack_redo = list(reversed(self._stack_undo))
+        return out
+
+    def subset(self, start: int, stop: int) -> Self:
+        """Create a new stack with a subset of undo stack."""
+        s = self._stack_undo[start:stop]
+        new = type(self)()
+        new._stack_undo = s
+        return new
+
+    def _check_stack_size(self):
+        if len(self._stack_undo) > self._max:
+            self._stack_undo = self._stack_undo[1:]
+        if len(self._redo_undo) > self._max:
+            self._redo_undo = self._stack_redo[1:]
 
     @property
-    def undo_stack(self) -> FrozenList[CommandSet]:
-        stack = FrozenList(self._undo_stack)
+    def stack_undo(self) -> FrozenList[CommandSet]:
+        stack = FrozenList(self._stack_undo)
         stack.freeze()
         return stack
 
     @property
-    def redo_stack(self) -> FrozenList[CommandSet]:
-        stack = FrozenList(self._redo_stack)
+    def stack_redo(self) -> FrozenList[CommandSet]:
+        stack = FrozenList(self._stack_redo)
         stack.freeze()
         return stack
 
     @property
     def stack_lengths(self) -> LengthPair:
-        return LengthPair(undo=len(self._undo_stack), redo=len(self._redo_stack))
+        return LengthPair(undo=len(self._stack_undo), redo=len(self._stack_redo))
 
-    def append(self, commandset: CommandSet) -> None:
-        self._undo_stack.append(commandset)
-        self._redo_stack.clear()
+    def append(self, cmdset: CommandSet) -> None:
+        self._stack_undo.append(cmdset)
+        self._stack_redo.clear()
         return None
 
     def _append_command(self, cmd, *args, **kwargs):
-        cmd_set = CommandSet(cmd=cmd, args=args, kwargs=kwargs)
-        return self.append(cmd_set)
+        cmdset = CommandSet(cmd=cmd, args=args, kwargs=kwargs)
+        return self.append(cmdset)
 
     def clear(self) -> None:
-        self._undo_stack.clear()
-        self._redo_stack.clear()
+        """Clear the stack."""
+        self._stack_undo.clear()
+        self._stack_redo.clear()
 
     def __getitem__(self, index: int) -> CommandSet:
-        return self._undo_stack[index]
+        return self._stack_undo[index]
 
     def __iter__(self) -> Iterator[CommandSet]:
-        return iter(self._undo_stack)
+        return iter(self._stack_undo)
 
     def command(self, f) -> ForwardCommand:
         return ForwardCommand(f, callback=self._append_command)
+
+    # def property(self, fget=None, fset=None, fdel=None, doc=None) -> property:
+    #     ...
+
+    # def classmethod(self, func) -> classmethod:
+    #     ...
+
+    # def staticmethod(self, func) -> staticmethod:
+    #     ...

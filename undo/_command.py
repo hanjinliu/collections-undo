@@ -2,7 +2,7 @@ from __future__ import annotations
 from typing import Callable, NamedTuple, TYPE_CHECKING, TypeVar
 
 if TYPE_CHECKING:
-    from typing_extensions import ParamSpec, Self
+    from typing_extensions import ParamSpec
 
     _P = ParamSpec("_P")
     _R = TypeVar("_R")

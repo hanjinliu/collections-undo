@@ -1,7 +1,7 @@
 from undo import CommandStack
 from unittest.mock import MagicMock
 
-def test_register():
+def test_stack_operations():
     mock = MagicMock()
     stack = CommandStack()
 
@@ -58,3 +58,35 @@ def test_register():
     assert out == CommandStack.empty
     assert stack.stack_lengths == (2, 0)
     mock.assert_not_called()
+
+def test_repeat():
+    mock = MagicMock()
+    stack = CommandStack()
+
+    @stack.command
+    def a(x, y):
+        mock("do", x, y)
+        return 0
+
+    @a.undo_def
+    def a(x, y):
+        mock("undo", x, y)
+        return -1
+
+    mock.assert_not_called()
+
+    out = stack.repeat()
+    assert out == CommandStack.empty
+    mock.assert_not_called()
+
+    out = a(1, 2)
+    out = stack.repeat()
+    assert out == 0
+    mock.assert_called_with("do", 1, 2)
+    assert stack.stack_lengths == (2, 0)
+    mock.reset_mock()
+
+    out = stack.repeat()
+    assert out == 0
+    mock.assert_called_with("do", 1, 2)
+    assert stack.stack_lengths == (3, 0)
