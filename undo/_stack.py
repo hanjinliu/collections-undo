@@ -2,8 +2,11 @@ from __future__ import annotations
 from functools import wraps
 from typing import Any, Callable, Iterator, NamedTuple, TYPE_CHECKING
 from dataclasses import dataclass
-from ._command import ForwardCommand, Command
+from ._command import Command
 from frozenlist import FrozenList
+
+if TYPE_CHECKING:
+    from typing_extensions import Self
 
 
 def _fmt_arg(v: Any) -> str:
@@ -11,10 +14,6 @@ def _fmt_arg(v: Any) -> str:
     if len(v_repr) > 14:
         v_repr = "#" + type(v).__name__ + "#"
     return v_repr
-
-
-if TYPE_CHECKING:
-    from typing_extensions import Self
 
 
 @dataclass(repr=False)
@@ -91,7 +90,7 @@ class CommandStack:
         if len(self._stack_undo) == 0:
             return self.empty
         cmdset = self._stack_undo.pop()
-        out = cmdset.cmd.revert(*cmdset.args, **cmdset.kwargs)
+        out = cmdset.cmd._revert(*cmdset.args, **cmdset.kwargs)
         self._stack_redo.append(cmdset)
         return out
 
@@ -100,7 +99,7 @@ class CommandStack:
         if len(self._stack_redo) == 0:
             return self.empty
         cmdset = self._stack_redo.pop()
-        out = cmdset.cmd.call_raw(*cmdset.args, **cmdset.kwargs)
+        out = cmdset.cmd._call_raw(*cmdset.args, **cmdset.kwargs)
         self._stack_undo.append(cmdset)
         return out
 
@@ -109,14 +108,14 @@ class CommandStack:
         if len(self._stack_undo) == 0:
             return self.empty
         cmdset = self._stack_undo[-1]
-        out = cmdset.cmd.call_raw(*cmdset.args, **cmdset.kwargs)
+        out = cmdset.cmd._call_raw(*cmdset.args, **cmdset.kwargs)
         self._stack_undo.append(cmdset)
         return out
 
     def run_all(self) -> Any:
         """Run all the command."""
         for cmdset in self._stack_undo:
-            out = cmdset.cmd.call_raw(*cmdset.args, **cmdset.kwargs)
+            out = cmdset.cmd._call_raw(*cmdset.args, **cmdset.kwargs)
         self._stack_redo = list(reversed(self._stack_undo))
         return out
 
@@ -135,18 +134,21 @@ class CommandStack:
 
     @property
     def stack_undo(self) -> FrozenList[CommandSet]:
+        """Frozen list of undo stack."""
         stack = FrozenList(self._stack_undo)
         stack.freeze()
         return stack
 
     @property
     def stack_redo(self) -> FrozenList[CommandSet]:
+        """Frozen list of redo stack."""
         stack = FrozenList(self._stack_redo)
         stack.freeze()
         return stack
 
     @property
     def stack_lengths(self) -> LengthPair:
+        """Return length of undo and redo stack"""
         return LengthPair(undo=len(self._stack_undo), redo=len(self._stack_redo))
 
     def append(self, cmdset: CommandSet) -> None:
@@ -169,10 +171,18 @@ class CommandStack:
     def __iter__(self) -> Iterator[CommandSet]:
         return iter(self._stack_undo)
 
-    def command(self, f) -> ForwardCommand:
-        return ForwardCommand(f, parent=self)
+    def command(self, f: Callable) -> Command:
+        """Decorator for command construction."""
+        return Command(f, parent=self)
 
-    def property(self, fget=None, fset=None, fdel=None, doc=None) -> undoable_property:
+    def property(
+        self,
+        fget: Callable[[Any], Any] | None = None,
+        fset: Callable[[Any, Any], None] | None = None,
+        fdel: Callable[[Any], None] | None = None,
+        doc: str | None = None,
+    ) -> undoable_property:
+        """Decorator for undoable property construction."""
         return undoable_property(fget, fset, fdel, doc=doc, parent=self)
 
 
@@ -185,7 +195,7 @@ class undoable_property(property):
         self._cmd_stack = parent
         super().__init__(fget, fset, fdel, doc)
 
-    def getter(self, fget: Callable[[Any], Any]) -> undoable_property:
+    def getter(self, fget: Callable[[Any], Any], /) -> undoable_property:
         return undoable_property(
             fget=fget,
             fset=self.fset,
@@ -194,7 +204,7 @@ class undoable_property(property):
             parent=self._cmd_stack,
         )
 
-    def setter(self, fset):
+    def setter(self, fset: Callable[[Any, Any], None], /) -> undoable_property:
         @self._cmd_stack.command
         def fset_cmd(obj, val, old_val):
             fset(obj, val)
@@ -215,3 +225,6 @@ class undoable_property(property):
             doc=self.__doc__,
             parent=self._cmd_stack,
         )
+
+    def deleter(self, fdel: Callable[[Any], None], /) -> undoable_property:
+        raise TypeError("undoable_property object does not support deleter.")
