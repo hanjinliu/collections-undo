@@ -9,7 +9,6 @@ if TYPE_CHECKING:
     _P = ParamSpec("_P")
     _R = TypeVar("_R")
     _RR = TypeVar("_RR")
-    _F = TypeVar("_F")
 
 
 class NotReversibleError(RuntimeError):
@@ -36,14 +35,6 @@ class Command:
     def undo_def(self, undo: Callable[_P, _RR]) -> Self:
         self._func_rv = undo
         return self
-
-    def undef(self, undef: _F) -> _F:
-        @wraps(undef)
-        def _undef(*args, **kwargs):
-            self._parent.clear()
-            return undef(*args, **kwargs)
-
-        return _undef
 
     def _call_with_callback(self, *args: _P.args, **kwargs: _P.kwargs) -> _R:
         out = self._call_raw(*args, **kwargs)

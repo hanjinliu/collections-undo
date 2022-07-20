@@ -1,14 +1,18 @@
 from __future__ import annotations
 from collections import deque
-from typing import Any, Callable, Iterator, NamedTuple, TYPE_CHECKING
+from typing import Any, Callable, Iterator, NamedTuple, TYPE_CHECKING, TypeVar
 from dataclasses import dataclass
+from functools import wraps
 from frozenlist import FrozenList
 
 from ._command import Command
-from ._undoable import undoable_function, undoable_property
+from ._undoable import undoable_setitem, undoable_property
+from ._const import empty
 
 if TYPE_CHECKING:
     from typing_extensions import Self
+
+_F = TypeVar("_F", bound=Callable)
 
 
 def _fmt_arg(v: Any) -> str:
@@ -47,16 +51,7 @@ class LengthPair(NamedTuple):
     redo: int
 
 
-class _Empty:
-    def __repr__(self) -> str:
-        return "<undo.CommandStack.empty>"
-
-    def __str__(self) -> str:
-        return "<empty>"
-
-
 class UndoStack:
-    empty = _Empty()
     _STACK_MAP: dict[int, Self] = {}
 
     def __init__(self, max: int | None = None):
@@ -99,7 +94,7 @@ class UndoStack:
     def undo(self) -> Any:
         """Undo last command and update undo/redo stacks."""
         if len(self._stack_undo) == 0:
-            return self.empty
+            return empty
         cmdset = self._stack_undo.pop()
         out = cmdset.cmd._revert(*cmdset.args, **cmdset.kwargs)
         self._stack_redo.append(cmdset)
@@ -108,7 +103,7 @@ class UndoStack:
     def redo(self) -> Any:
         """Redo last command and update undo/redo stacks."""
         if len(self._stack_redo) == 0:
-            return self.empty
+            return empty
         cmdset = self._stack_redo.pop()
         out = cmdset.cmd._call_raw(*cmdset.args, **cmdset.kwargs)
         self._stack_undo.append(cmdset)
@@ -116,9 +111,9 @@ class UndoStack:
 
     def repeat(self) -> Any:
         """Repeat the last command and update undo/redo stacks."""
-        # BUG: incompatible with undoable_function
+        # BUG: incompatible with undoable_setitem
         if len(self._stack_undo) == 0:
-            return self.empty
+            return empty
         cmdset = self._stack_undo[-1]
         return cmdset._call_with_callback()
 
@@ -190,6 +185,16 @@ class UndoStack:
         """Decorator for undoable property construction."""
         return undoable_property(fget, fset, fdel, doc=doc, parent=self)
 
-    def function(self, f: Callable) -> undoable_function:
+    def setitem(self, f: Callable) -> undoable_setitem:
         """Decorator for undoable function construction."""
-        return undoable_function(f, parent=self)
+        return undoable_setitem(f, parent=self)
+
+    def undef(self, undef: _F) -> _F:
+        """Mark an function as an undo-undefined function."""
+
+        @wraps(undef)
+        def _undef(*args, **kwargs):
+            self.clear()
+            return undef(*args, **kwargs)
+
+        return _undef

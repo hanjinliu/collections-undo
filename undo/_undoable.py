@@ -2,6 +2,7 @@ from __future__ import annotations
 from functools import wraps
 from typing import Any, Callable, TYPE_CHECKING, Literal, TypeVar
 from ._command import Command
+from ._const import empty
 
 if TYPE_CHECKING:
     from typing_extensions import Self, ParamSpec
@@ -9,27 +10,32 @@ if TYPE_CHECKING:
 
     _P = ParamSpec("_P")
     _R = TypeVar("_R")
-    _S = TypeVar("_S")
 
 
-class undoable_function:
+def _default_getter(*args, **kwargs) -> None:
+    return None
+
+
+class undoable_setitem:
     _INSTANCES: dict[int, Self] = {}
 
     def __init__(
         self,
         func: Callable[_P, _R],
-        getter: Callable[[Any], _S] = None,
-        setter: Callable[[Any, _S], None] = None,
+        getter: Callable[_P, _R] | None = None,
         parent: UndoStack = None,
     ):
         self._func = func
+        if getter is None:
+            getter = _default_getter
         self._getter = getter
-        if setter is None:
-            setter = func
-        self._setter = setter
         self._parent = parent
         self._cmd = None
         wraps(func)(self)
+
+    def getter(self, f: Callable[_P, _R]) -> Callable[_P, _R]:
+        self._getter = f
+        return f
 
     @property
     def cmd(self) -> Command:
@@ -37,50 +43,38 @@ class undoable_function:
             self._cmd = self._create_command()
         return self._cmd
 
+    def __call__(self, *args: _P.args, **kwargs: _P.kwargs) -> _R:
+        _old_state = self._getter(*args, **kwargs)
+        out = self._func(*args, **kwargs)
+        self._parent._append_command(self.cmd, (args, kwargs), _old_state)
+        return out
+
     def __get__(self, obj, objtype=None) -> Self:
         if obj is None:
             return self
         _id = id(obj)
         if (out := self._INSTANCES.get(_id, None)) is None:
-            if self._getter is None:
-                getter = None
-            else:
-                getter = self._getter.__get__(obj, objtype)
             out = type(self)(
                 func=self._func.__get__(obj, objtype),
-                getter=getter,
-                setter=self._setter.__get__(obj, objtype),
+                getter=self._getter.__get__(obj, objtype),
                 parent=self._parent.__get__(obj, objtype),
             )
             self._INSTANCES[_id] = out
         return out
 
-    def __call__(self, *args: _P.args, **kwargs: _P.kwargs) -> _R:
-        old_state = self._getter()
-        out = self._func(*args, **kwargs)
-        _new_state = self._getter()
-        self._parent._append_command(self.cmd, _new_state, old_state)
-        return out
-
     def __repr__(self) -> str:
         return f"{type(self).__name__}<{self._func!r}>"
 
-    def state_getter(self, f: Callable[[Any], _S]) -> Callable[[Any], _S]:
-        """Set the state getter function."""
-        self._getter = f
-        return f
-
-    def state_setter(self, f: Callable[[_S], None]) -> Callable[[_S], None]:
-        """Set the state setter function."""
-        self._setter = f
-        return f
-
     def _create_command(self) -> Command:
-        def fw(new_state, old_state):
-            self._setter(new_state)
+        def fw(new, old):
+            args, kwargs = new
+            return self._func(*args, **kwargs)
 
-        def rv(new_state, old_state):
-            self._setter(old_state)
+        def rv(new, old):
+            if old is None:
+                return empty
+            args, kwargs = old
+            return self._func(*args, **kwargs)
 
         return Command(fw, self._parent, rv)
 

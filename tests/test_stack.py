@@ -1,4 +1,4 @@
-from undo import UndoStack
+from undo import UndoStack, empty
 from unittest.mock import MagicMock
 
 def test_stack_operations():
@@ -39,7 +39,7 @@ def test_stack_operations():
     mock.reset_mock()
 
     out = stack.undo()
-    assert out == UndoStack.empty
+    assert out == empty
     assert stack.stack_lengths == (0, 2)
     mock.assert_not_called()
 
@@ -55,7 +55,7 @@ def test_stack_operations():
     mock.reset_mock()
 
     out = stack.redo()
-    assert out == UndoStack.empty
+    assert out == empty
     assert stack.stack_lengths == (2, 0)
     mock.assert_not_called()
 
@@ -76,7 +76,7 @@ def test_repeat():
     mock.assert_not_called()
 
     out = stack.repeat()
-    assert out == UndoStack.empty
+    assert out == empty
     mock.assert_not_called()
 
     out = a(1, 2)

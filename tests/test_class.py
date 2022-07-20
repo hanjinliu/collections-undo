@@ -104,18 +104,18 @@ def test_undoable_function():
         def ans(self):
             return self.ans_add, self.ans_sub
 
-        @stack.function
+        @stack.setitem
         def calc(self, a, b):
             self.ans_add = a + b
             self.ans_sub = a - b
 
-        @calc.state_getter
-        def _add_getter(self):
-            return self.ans
-
-        @calc.state_setter
-        def _add_setter(self, val):
-            self.ans_add, self.ans_sub = val
+        @calc.getter
+        def _add_init(self, a, b):
+            add = self.ans_add
+            sub = self.ans_sub
+            a = (add + sub) / 2
+            b = (add - sub) / 2
+            return (a, b), {}
 
     x = A()
     x.calc(3, 5)
@@ -127,3 +127,33 @@ def test_undoable_function():
     assert x.ans == (8, -2)
     x.stack.undo()
     assert x.ans == (0, 0)
+
+def test_setitem():
+    class Arr:
+        stack = UndoStack()
+
+        def __init__(self, arr: list):
+            self.arr = arr
+
+        @stack.setitem
+        def __setitem__(self, sl, val):
+            self.arr[sl] = val
+
+        @__setitem__.getter
+        def _setitem_getter(self, sl, val):
+            return (sl, self.arr[sl]), {}
+
+    a = Arr([0, 0, 0, 0, 0])
+    a[1] = 1
+    a[3] = 3
+    assert a.arr == [0, 1, 0, 3, 0]
+    a.stack.undo()
+    assert a.arr == [0, 1, 0, 0, 0]
+    a.stack.undo()
+    assert a.arr == [0, 0, 0, 0, 0]
+    a.stack.redo()
+    assert a.arr == [0, 1, 0, 0, 0]
+    a.stack.redo()
+    assert a.arr == [0, 1, 0, 3, 0]
+    a.stack.redo()
+    assert a.arr == [0, 1, 0, 3, 0]
