@@ -1,9 +1,8 @@
 from __future__ import annotations
-from collections import deque
-from typing import Any, Callable, NamedTuple, TYPE_CHECKING, TypeVar
+from contextlib import contextmanager
+from typing import Any, Callable, Iterable, NamedTuple, TYPE_CHECKING, TypeVar
 from dataclasses import dataclass
 from functools import wraps
-from frozenlist import FrozenList
 
 from ._command import Command
 from ._undoable import UndoableInterface, UndoableProperty
@@ -36,14 +35,54 @@ class CommandSet:
         fstr = self.cmd._func_fw.__name__
         return f"{_cmd}<{fstr}({args_str})>"
 
-    def copy(self) -> Self:
-        return type(self)(self.cmd, self.args, self.kwargs)
-
     def _call_with_callback(self):
         return self.cmd._call_with_callback(*self.args, **self.kwargs)
 
     def _call_raw(self):
         return self.cmd._call_raw(*self.args, **self.kwargs)
+
+    def _revert(self):
+        return self.cmd._revert(*self.args, **self.kwargs)
+
+    @classmethod
+    def merge(cls, cmds: Iterable[CommandSet], *, reverse: bool = False) -> CommandSet:
+        """
+        Merge multiple commands into one.
+
+        This method is used to reduce command set stack by merging simple operations.
+        For instance, if you defined a undoable "append" method and intend to define
+        "extend" method by repeating "append" operation, a lot of "append" command
+        will be generated. To avoid this, you can use this method to merge "append".
+
+        Parameters
+        ----------
+        cmds : Iterable[CommandSet]
+            List of command sets to merge.
+        reverse : bool, default is False
+            Reverse command set order.
+
+        Returns
+        -------
+        CommandSet
+            Merged command set.
+        """
+        arguments: list[tuple, dict[str, Any]] = []
+        commands: list[Command] = []
+
+        for cmd in cmds:
+            commands.append(cmd.cmd)
+            arguments.append((cmd.args, cmd.kwargs))
+
+        if reverse:
+            commands.reverse()
+            arguments.reverse()
+        cmd_merged = Command.merge(commands)
+        return cls(cmd_merged, (arguments,), {})
+
+    @classmethod
+    def loop(cls, cmd: Command, arguments: list[tuple[tuple, dict[str, Any]]]) -> Self:
+        cmd_loop = cmd.looped()
+        return cls(cmd_loop, (arguments,), {})
 
 
 class LengthPair(NamedTuple):
@@ -54,10 +93,9 @@ class LengthPair(NamedTuple):
 
 
 class UndoManager:
-    def __init__(self, max: int | None = None):
-        self._stack_undo: deque[CommandSet] = deque(maxlen=max)
-        self._stack_redo: deque[CommandSet] = deque(maxlen=max)
-        self._max = max
+    def __init__(self):
+        self._stack_undo: list[CommandSet] = []
+        self._stack_redo: list[CommandSet] = []
         self._instances: dict[int, Self] = {}
 
     def __repr__(self):
@@ -88,7 +126,7 @@ class UndoManager:
             return self
         _id = id(obj)
         if (stack := self._instances.get(_id, None)) is None:
-            stack = type(self)(max=self._max)
+            stack = type(self)()
             self._instances[_id] = stack
         return stack
 
@@ -97,7 +135,7 @@ class UndoManager:
         if len(self._stack_undo) == 0:
             return empty
         cmdset = self._stack_undo.pop()
-        out = cmdset.cmd._revert(*cmdset.args, **cmdset.kwargs)
+        out = cmdset._revert()
         self._stack_redo.append(cmdset)
         return out
 
@@ -106,7 +144,7 @@ class UndoManager:
         if len(self._stack_redo) == 0:
             return empty
         cmdset = self._stack_redo.pop()
-        out = cmdset.cmd._call_raw(*cmdset.args, **cmdset.kwargs)
+        out = cmdset._call_raw()
         self._stack_undo.append(cmdset)
         return out
 
@@ -134,18 +172,14 @@ class UndoManager:
         return new
 
     @property
-    def stack_undo(self) -> FrozenList[CommandSet]:
-        """Frozen list of undo stack."""
-        stack = FrozenList(self._stack_undo)
-        stack.freeze()
-        return stack
+    def stack_undo(self) -> list[CommandSet]:
+        """List of undo stack."""
+        return list(self._stack_undo)
 
     @property
-    def stack_redo(self) -> FrozenList[CommandSet]:
-        """Frozen list of redo stack."""
-        stack = FrozenList(self._stack_redo)
-        stack.freeze()
-        return stack
+    def stack_redo(self) -> list[CommandSet]:
+        """List of redo stack."""
+        return list(self._stack_redo)
 
     @property
     def stack_lengths(self) -> LengthPair:
@@ -193,3 +227,28 @@ class UndoManager:
             return undef(*args, **kwargs)
 
         return _undef
+
+    def _merge_last_commands(self, num: int, *, same_command: bool = False) -> None:
+        """Merge a command set into the undo stack."""
+        if not same_command:
+            merged = CommandSet.merge(self._stack_undo[-num:])
+
+        else:
+            arguments = []
+            for cmdset in self._stack_undo[-num:]:
+                arguments.append((cmdset.args, cmdset.kwargs))
+                cmd = cmdset.cmd
+
+            merged = CommandSet.loop(cmd, arguments)
+
+        del self._stack_undo[-num:]
+        self._stack_undo.append(merged)
+        return None
+
+    @contextmanager
+    def merging(self, same_command: bool = False) -> None:
+        len_before = len(self._stack_undo)
+        yield None
+        len_after = len(self._stack_undo)
+        self._merge_last_commands(len_after - len_before, same_command=same_command)
+        return None

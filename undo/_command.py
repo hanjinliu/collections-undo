@@ -1,6 +1,6 @@
 from __future__ import annotations
 from functools import wraps
-from typing import Callable, TYPE_CHECKING, TypeVar
+from typing import Any, Callable, TYPE_CHECKING, Iterable, TypeVar
 
 if TYPE_CHECKING:
     from typing_extensions import ParamSpec, Self
@@ -28,11 +28,26 @@ class Command:
         wraps(func)(self)
         self._instances: dict[int, Self] = {}
 
+    def __hash__(self) -> int:
+        return id(self)
+
+    def __newlike__(
+        self,
+        func: Callable[_P, _R],
+        mgr: UndoManager,
+        inverse_func: Callable[_P, _RR] | None = None,
+    ) -> Self:
+        return type(self)(func, mgr, inverse_func)
+
     def __repr__(self) -> str:
         return f"{type(self).__name__}<{self.__name__}>"
 
     def undo_def(self, undo: Callable[_P, _RR]) -> Self:
-        return type(self)(self._func_fw, self._mgr, undo)
+        return self.__newlike__(
+            func=self._func_fw,
+            mgr=self._mgr,
+            inverse_func=undo,
+        )
 
     def _call_with_callback(self, *args: _P.args, **kwargs: _P.kwargs) -> _R:
         out = self._call_raw(*args, **kwargs)
@@ -49,7 +64,7 @@ class Command:
 
     __call__ = _call_with_callback
 
-    def __get__(self, obj, objtype=None) -> Command:
+    def __get__(self, obj, objtype=None) -> Self:
         """Create a method-like command object."""
         if obj is None:
             return self
@@ -66,3 +81,57 @@ class Command:
             )
             self._instances[_id] = out
         return out
+
+    @classmethod
+    def merge(cls, cmds: Iterable[Command]) -> Self:
+        """Merge multiple commands into a single command."""
+        _fws = []
+        _rvs = []
+        _mgr = None
+        for cmd in cmds:
+            _fws.append(cmd._func_fw)
+            _rvs.append(cmd._func_rv)
+            if _mgr is not None:
+                if _mgr is not cmd._mgr:
+                    raise ValueError("Commands must be from the same manager.")
+            else:
+                _mgr = cmd._mgr
+
+        def merged(arguments: list[tuple[tuple, dict[str, Any]]]):
+            for _fw, (args, kwargs) in zip(_fws, arguments):
+                out = _fw(*args, **kwargs)
+            return out
+
+        def _func_rv(arguments: list[tuple[tuple, dict[str, Any]]]):
+            for _rv, (args, kwargs) in zip(reversed(_rvs), reversed(arguments)):
+                out = _rv(*args, **kwargs)
+            return out
+
+        return cls(merged, _mgr, _func_rv)
+
+    def looped(self) -> Self:
+        """Create a looped command."""
+
+        def _func_fw(arguments: list[tuple[tuple, dict[str, Any]]]):
+            for (args, kwargs) in arguments:
+                out = self._func_fw(*args, **kwargs)
+            return out
+
+        def _func_rv(arguments: list[tuple[tuple, dict[str, Any]]]):
+            for (args, kwargs) in reversed(arguments):
+                out = self._func_rv(*args, **kwargs)
+            return out
+
+        return self.__newlike__(
+            func=_func_fw,
+            mgr=self._mgr,
+            inverse_func=_func_rv,
+        )
+
+    def inverted(self) -> Self:
+        """Create a command with swapped forward and reverse functions."""
+        return self.__newlike__(
+            func=self._func_rv,
+            mgr=self._mgr,
+            inverse_func=self._func_fw,
+        )

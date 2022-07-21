@@ -34,7 +34,34 @@ def test_setitem_sequence():
 
 
 def test_del():
-    ...
+    l = UndoableList([1, 2, 3, 4])
+    del l[1]
+    assert l._list == [1, 3, 4]
+    assert l.pop() == 4
+    assert l._list == [1, 3]
+
+    l.undo()
+    assert l._list == [1, 3, 4]
+    l.undo()
+    assert l._list == [1, 2, 3, 4]
+    l.redo()
+    assert l._list == [1, 3, 4]
+    l.redo()
+    assert l._list == [1, 3]
 
 def test_del_sequence():
-    ...
+    l = UndoableList([1, 2, 3, 4, 5, 6])
+    del l[4:]
+    assert l._list == [1, 2, 3, 4]
+    l.undo()
+    assert l._list == [1, 2, 3, 4, 5, 6]
+    l.redo()
+    assert l._list == [1, 2, 3, 4]
+
+    l = UndoableList([1, 2, 3, 4, 5, 6])
+    del l[1:5:2]
+    assert l._list == [1, 3, 5, 6]
+    l.undo()
+    assert l._list == [1, 2, 3, 4, 5, 6]
+    l.redo()
+    assert l._list == [1, 3, 5, 6]
