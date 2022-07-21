@@ -4,7 +4,7 @@ from typing import Callable, TYPE_CHECKING, TypeVar
 
 if TYPE_CHECKING:
     from typing_extensions import ParamSpec, Self
-    from ._stack import UndoStack
+    from ._stack import UndoManager
 
     _P = ParamSpec("_P")
     _R = TypeVar("_R")
@@ -21,12 +21,12 @@ class Command:
     def __init__(
         self,
         func: Callable[_P, _R],
-        parent: UndoStack,
+        mgr: UndoManager,
         inverse_func: Callable[_P, _RR] | None = None,
     ):
         self._func_fw = func
         self._func_rv = inverse_func
-        self._parent = parent
+        self._mgr = mgr
         wraps(func)(self)
 
     def __repr__(self) -> str:
@@ -38,7 +38,7 @@ class Command:
 
     def _call_with_callback(self, *args: _P.args, **kwargs: _P.kwargs) -> _R:
         out = self._call_raw(*args, **kwargs)
-        self._parent._append_command(self, *args, *kwargs)
+        self._mgr._append_command(self, *args, *kwargs)
         return out
 
     def _call_raw(self, *args: _P.args, **kwargs: _P.kwargs) -> _R:
@@ -63,7 +63,7 @@ class Command:
                 inv_func = self._func_rv.__get__(obj, objtype)
             out = type(self)(
                 func=self._func_fw.__get__(obj, objtype),
-                parent=self._parent.__get__(obj, objtype),
+                mgr=self._mgr.__get__(obj, objtype),
                 inverse_func=inv_func,
             )
             self._INSTANCES[_id] = out

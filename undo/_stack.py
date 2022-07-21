@@ -1,12 +1,12 @@
 from __future__ import annotations
 from collections import deque
-from typing import Any, Callable, Iterator, NamedTuple, TYPE_CHECKING, TypeVar
+from typing import Any, Callable, NamedTuple, TYPE_CHECKING, TypeVar
 from dataclasses import dataclass
 from functools import wraps
 from frozenlist import FrozenList
 
 from ._command import Command
-from ._undoable import undoable_setitem, undoable_property
+from ._undoable import UndoableInterface, UndoableProperty
 from ._const import empty
 
 if TYPE_CHECKING:
@@ -47,11 +47,13 @@ class CommandSet:
 
 
 class LengthPair(NamedTuple):
+    """Pair of stack size."""
+
     undo: int
     redo: int
 
 
-class UndoStack:
+class UndoManager:
     _STACK_MAP: dict[int, Self] = {}
 
     def __init__(self, max: int | None = None):
@@ -66,9 +68,9 @@ class UndoStack:
         redo_stack = list(self._stack_redo)
 
         if n_undo < n_redo:
-            undo_stack = undo_stack + [None] * (n_redo - n_undo)
+            undo_stack = [None] * (n_redo - n_undo) + undo_stack
         elif n_undo > n_redo:
-            redo_stack = redo_stack + [None] * (n_undo - n_redo)
+            redo_stack = [None] * (n_undo - n_redo) + redo_stack
 
         s: list[tuple[str, str]] = []
         nchar_max = 0
@@ -82,7 +84,7 @@ class UndoStack:
         s = "\n".join(f"{s0:>{nchar_max + 2}}, {s1}" for s0, s1 in s)
         return cls_name + f"[\n{s}\n]"
 
-    def __get__(self, obj, objtype=None) -> UndoStack:
+    def __get__(self, obj, objtype=None) -> UndoManager:
         if obj is None:
             return self
         _id = id(obj)
@@ -165,15 +167,9 @@ class UndoStack:
         self._stack_undo.clear()
         self._stack_redo.clear()
 
-    def __getitem__(self, index: int) -> CommandSet:
-        return self._stack_undo[index]
-
-    def __iter__(self) -> Iterator[CommandSet]:
-        return iter(self._stack_undo)
-
     def command(self, f: Callable) -> Command:
         """Decorator for command construction."""
-        return Command(f, parent=self)
+        return Command(f, mgr=self)
 
     def property(
         self,
@@ -181,13 +177,13 @@ class UndoStack:
         fset: Callable[[Any, Any], None] | None = None,
         fdel: Callable[[Any], None] | None = None,
         doc: str | None = None,
-    ) -> undoable_property:
+    ) -> UndoableProperty:
         """Decorator for undoable property construction."""
-        return undoable_property(fget, fset, fdel, doc=doc, parent=self)
+        return UndoableProperty(fget, fset, fdel, doc=doc, parent=self)
 
-    def setitem(self, f: Callable) -> undoable_setitem:
-        """Decorator for undoable function construction."""
-        return undoable_setitem(f, parent=self)
+    def interface(self, f: Callable) -> UndoableInterface:
+        """Decorator for undoable setter function construction."""
+        return UndoableInterface(f, mgr=self)
 
     def undef(self, undef: _F) -> _F:
         """Mark an function as an undo-undefined function."""

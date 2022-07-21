@@ -1,9 +1,9 @@
-from undo import UndoStack, empty
+from undo import UndoManager, empty
 from unittest.mock import MagicMock
 
 def test_stack_operations():
     mock = MagicMock()
-    stack = UndoStack()
+    stack = UndoManager()
 
     @stack.command
     def a(x, y):
@@ -61,7 +61,7 @@ def test_stack_operations():
 
 def test_repeat():
     mock = MagicMock()
-    stack = UndoStack()
+    stack = UndoManager()
 
     @stack.command
     def a(x, y):

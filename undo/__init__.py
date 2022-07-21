@@ -1,6 +1,6 @@
 __version__ = "0.0.1"
 
-from ._stack import UndoStack
+from ._stack import UndoManager
 from ._const import empty
 
-__all__ = ["UndoStack", "empty"]
+__all__ = ["UndoManager", "empty"]
