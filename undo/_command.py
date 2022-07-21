@@ -16,8 +16,6 @@ class NotReversibleError(RuntimeError):
 
 
 class Command:
-    _INSTANCES: dict[int, Self] = {}
-
     def __init__(
         self,
         func: Callable[_P, _R],
@@ -28,13 +26,13 @@ class Command:
         self._func_rv = inverse_func
         self._mgr = mgr
         wraps(func)(self)
+        self._instances: dict[int, Self] = {}
 
     def __repr__(self) -> str:
         return f"{type(self).__name__}<{self.__name__}>"
 
     def undo_def(self, undo: Callable[_P, _RR]) -> Self:
-        self._func_rv = undo
-        return self
+        return type(self)(self._func_fw, self._mgr, undo)
 
     def _call_with_callback(self, *args: _P.args, **kwargs: _P.kwargs) -> _R:
         out = self._call_raw(*args, **kwargs)
@@ -56,7 +54,7 @@ class Command:
         if obj is None:
             return self
         _id = id(obj)
-        if (out := self._INSTANCES.get(_id, None)) is None:
+        if (out := self._instances.get(_id, None)) is None:
             if self._func_rv is None:
                 inv_func = None
             else:
@@ -66,5 +64,5 @@ class Command:
                 mgr=self._mgr.__get__(obj, objtype),
                 inverse_func=inv_func,
             )
-            self._INSTANCES[_id] = out
+            self._instances[_id] = out
         return out

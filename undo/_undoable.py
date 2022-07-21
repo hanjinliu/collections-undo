@@ -18,8 +18,6 @@ def _dummy_func(*args, **kwargs) -> None:
 
 
 class UndoableInterface:
-    _INSTANCES: dict[int, UndoableInterface] = {}
-
     def __init__(
         self,
         fset: Callable[_P, _R] | None = None,
@@ -36,6 +34,7 @@ class UndoableInterface:
         self.fget = fget
         self.mgr = mgr
         self._cmd = None
+        self._instances: dict[int, UndoableInterface] = {}
 
     def descriptor(self, fget: Callable[_P, _Args]) -> Callable[_P, _Args]:
         return UndoableInterface(fget=fget, fset=self.fset, mgr=self.mgr)
@@ -63,13 +62,13 @@ class UndoableInterface:
         if obj is None:
             return self
         _id = id(obj)
-        if (out := self._INSTANCES.get(_id, None)) is None:
+        if (out := self._instances.get(_id, None)) is None:
             out = UndoableInterface(
                 fset=self.fset.__get__(obj, objtype),
                 fget=self.fget.__get__(obj, objtype),
                 mgr=self.mgr.__get__(obj, objtype),
             )
-            self._INSTANCES[_id] = out
+            self._instances[_id] = out
         return out
 
     def __repr__(self) -> str:

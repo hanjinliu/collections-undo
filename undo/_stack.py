@@ -54,12 +54,11 @@ class LengthPair(NamedTuple):
 
 
 class UndoManager:
-    _STACK_MAP: dict[int, Self] = {}
-
     def __init__(self, max: int | None = None):
         self._stack_undo: deque[CommandSet] = deque(maxlen=max)
         self._stack_redo: deque[CommandSet] = deque(maxlen=max)
         self._max = max
+        self._instances: dict[int, Self] = {}
 
     def __repr__(self):
         cls_name = type(self).__name__
@@ -88,9 +87,9 @@ class UndoManager:
         if obj is None:
             return self
         _id = id(obj)
-        if (stack := self._STACK_MAP.get(_id, None)) is None:
+        if (stack := self._instances.get(_id, None)) is None:
             stack = type(self)(max=self._max)
-            self._STACK_MAP[_id] = stack
+            self._instances[_id] = stack
         return stack
 
     def undo(self) -> Any:
@@ -113,7 +112,7 @@ class UndoManager:
 
     def repeat(self) -> Any:
         """Repeat the last command and update undo/redo stacks."""
-        # BUG: incompatible with undoable_setitem
+        # BUG: incompatible with undoable interface
         if len(self._stack_undo) == 0:
             return empty
         cmdset = self._stack_undo[-1]
