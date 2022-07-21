@@ -13,7 +13,13 @@ class AbstractUndoableList(MutableSequence[_T]):
 
     Abstract Methods
     ----------------
-    __getitem__, _raw_setitem, _raw_delitem, _raw_insert, __len__, __iter__
+    - ``__getitem__(self, key) -> _T`` ... Get item at ``key``. You must return a copy of
+      the item if the item is mutable, such as a numpy array.
+    - ``_raw_setitem(self, key, val) -> None`` ... Set item at ``key``.
+    - ``_raw_delitem(self, key) -> None`` ... Delete item at ``key``.
+    - ``_raw_insert(self, index, val)`` ... Insert ``val`` at ``index``.
+    - ``__len__(self) -> int`` ... Get length of list.
+    - ``__iter__(self) -> Iterator`` ... Iterate over list.
 
     """
 
