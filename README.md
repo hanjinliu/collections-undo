@@ -7,5 +7,5 @@ The purpose of this package is to make implementation of undo/redo easier and sa
 ### Installation
 
 ```
-pip install -U git.https://github.com/hanjinliu/undo.git
+pip install -U git+https://github.com/hanjinliu/undo.git
 ```
