@@ -21,7 +21,6 @@ setup(
     package_data={"undo": ["**/*.pyi", "*.pyi"]},
     install_requires=[
         "typing_extensions",
-        "frozenlist",
     ],
     python_requires=">=3.8",
 )

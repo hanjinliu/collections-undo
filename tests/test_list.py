@@ -65,3 +65,21 @@ def test_del_sequence():
     assert l._list == [1, 2, 3, 4, 5, 6]
     l.redo()
     assert l._list == [1, 3, 5, 6]
+
+def test_clear():
+    l = UndoableList([1, 2, 3, 4, 5, 6])
+    l.clear()
+    assert l._list == []
+    l.undo()
+    assert l._list == [1, 2, 3, 4, 5, 6]
+    l.redo()
+    assert l._list == []
+
+def test_reverse():
+    l = UndoableList([1, 2, 3])
+    l.reverse()
+    assert l._list == [3, 2, 1]
+    l.undo()
+    assert l._list == [1, 2, 3]
+    l.redo()
+    assert l._list == [3, 2, 1]

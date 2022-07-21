@@ -92,6 +92,8 @@ class AbstractUndoableList(MutableSequence[_T]):
     def insert(self, index: int, val: _T):
         self._raw_delitem(index)
 
+    # reimplemented methods
+
     def extend(self, values: Iterable[_T]) -> None:
         with self._mgr.merging(same_command=True):
             for val in values:
@@ -99,7 +101,11 @@ class AbstractUndoableList(MutableSequence[_T]):
 
     def clear(self) -> None:
         with self._mgr.merging(same_command=True):
-            [self._raw_delitem(-1) for _ in range(len(self))]
+            [self._delitem_command(i, self[i]) for i in reversed(range(len(self)))]
+
+    def reverse(self) -> None:
+        n = len(self)
+        self[:] = [self[i] for i in range(n - 1, -1, -1)]
 
     def undo(self):
         """Undo the last operation."""
@@ -135,6 +141,3 @@ class UndoableList(AbstractUndoableList[_T]):
 
     def sort(self, *, key=None, reverse=False):
         self[:] = sorted(self._list, key=key, reverse=reverse)
-
-    def reverse(self):
-        self[:] = reversed(self._list)

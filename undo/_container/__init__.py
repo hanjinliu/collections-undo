@@ -1,5 +1,11 @@
-from ._dict import UndoableDict
+from ._dict import UndoableDict, AbstractUndoableDict
 from ._list import UndoableList, AbstractUndoableList
 from ._set import UndoableSet
 
-__all__ = ["UndoableDict", "UndoableList", "AbstractUndoableList", "UndoableSet"]
+__all__ = [
+    "UndoableDict",
+    "AbstractUndoableDict",
+    "UndoableList",
+    "AbstractUndoableList",
+    "UndoableSet",
+]
