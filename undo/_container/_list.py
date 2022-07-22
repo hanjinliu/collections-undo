@@ -64,7 +64,7 @@ class AbstractUndoableList(MutableSequence[_T]):
     def _setitem(self, key, val):
         self._raw_setitem(key, val)
 
-    @_setitem.descriptor
+    @_setitem.server
     def _setitem(self, key, val):
         _val = self[key]
         if isinstance(key, slice):

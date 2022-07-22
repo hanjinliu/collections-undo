@@ -109,7 +109,7 @@ def test_undoable_interface():
             self.ans_add = a + b
             self.ans_sub = a - b
 
-        @calc.descriptor
+        @calc.server
         def calc(self, a, b):
             add = self.ans_add
             sub = self.ans_sub
@@ -139,7 +139,7 @@ def test_setitem():
         def __setitem__(self, sl, val):
             self.arr[sl] = val
 
-        @__setitem__.descriptor
+        @__setitem__.server
         def __setitem__(self, sl, val):
             return (sl, self.arr[sl]), {}
 

@@ -18,32 +18,48 @@ def _dummy_func(*args, **kwargs) -> None:
 
 
 class UndoableInterface:
+    """
+    An undoable object described by server/receiver interface.
+
+    A "server" provides arguments that reproduce the state of the object.
+    A "receiver" updates the object using given arguments.
+    Before calling receiver(*args, **kwargs), arguments are retrieved from:
+    >>> _args, _kwargs = server(*args, **kwargs)
+    and ``receiver(*_args, **_kwargs)`` reproduces the current state of the object.
+    """
+
     def __init__(
         self,
-        fset: Callable[_P, _R] | None = None,
-        fget: Callable[_P, _R] | None = None,
+        freceive: Callable[_P, _R] | None = None,
+        fserve: Callable[_P, _Args] | None = None,
         mgr: UndoManager = None,
     ):
-        if fset is None:
-            fset = _dummy_func
+        if freceive is None:
+            freceive = _dummy_func
         else:
-            wraps(fset)(self)
-        if fget is None:
-            fget = _dummy_func
-        self.fset = fset
-        self.fget = fget
-        self.mgr = mgr
+            wraps(freceive)(self)
+        if fserve is None:
+            fserve = _dummy_func
+        self.freceive = freceive
+        self.fserve = fserve
+        self._mgr = mgr
         self._cmd = None
         self._instances: dict[int, UndoableInterface] = {}
 
-    def descriptor(self, fget: Callable[_P, _Args]) -> Callable[_P, _Args]:
-        return UndoableInterface(fget=fget, fset=self.fset, mgr=self.mgr)
-
-    def setter(self, fset: Callable[_P, _R]) -> Callable[_P, _R]:
+    def server(self, fserve: Callable[_P, _Args]) -> Callable[_P, _Args]:
+        """Set the server function."""
         return UndoableInterface(
-            fget=self.fget,
-            fset=fset,
-            mgr=self.mgr,
+            fserve=fserve,
+            freceive=self.freceive,
+            mgr=self._mgr,
+        )
+
+    def receiver(self, freceive: Callable[_P, _R]) -> Callable[_P, _R]:
+        """Set the receiver function."""
+        return UndoableInterface(
+            fserve=self.fserve,
+            freceive=freceive,
+            mgr=self._mgr,
         )
 
     @property
@@ -53,9 +69,9 @@ class UndoableInterface:
         return self._cmd
 
     def __call__(self, *args: _P.args, **kwargs: _P.kwargs) -> _R:
-        _old_state = self.fget(*args, **kwargs)
-        out = self.fset(*args, **kwargs)
-        self.mgr._append_command(self.cmd, (args, kwargs), _old_state)
+        _old_state = self.fserve(*args, **kwargs)
+        out = self.freceive(*args, **kwargs)
+        self._mgr._append_command(self.cmd, (args, kwargs), _old_state)
         return out
 
     def __get__(self, obj, objtype=None) -> UndoableInterface:
@@ -64,28 +80,28 @@ class UndoableInterface:
         _id = id(obj)
         if (out := self._instances.get(_id, None)) is None:
             out = UndoableInterface(
-                fset=self.fset.__get__(obj, objtype),
-                fget=self.fget.__get__(obj, objtype),
-                mgr=self.mgr.__get__(obj, objtype),
+                freceive=self.freceive.__get__(obj, objtype),
+                fserve=self.fserve.__get__(obj, objtype),
+                mgr=self._mgr.__get__(obj, objtype),
             )
             self._instances[_id] = out
         return out
 
     def __repr__(self) -> str:
-        return f"{type(self).__name__}<{self.fset!r}>"
+        return f"{type(self).__name__}<{self.freceive!r}>"
 
     def _create_command(self) -> Command:
         def fw(new, old):
             args, kwargs = new
-            return self.fset(*args, **kwargs)
+            return self.freceive(*args, **kwargs)
 
         def rv(new, old):
             if old is None:
                 return empty
             args, kwargs = old
-            return self.fset(*args, **kwargs)
+            return self.freceive(*args, **kwargs)
 
-        cmd = Command(fw, self.mgr, rv)
+        cmd = Command(fw, self._mgr, rv)
         wraps(self)(cmd)
         return cmd
 

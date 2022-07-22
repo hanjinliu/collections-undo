@@ -110,7 +110,7 @@ class AbstractUndoableNDArray(ABC):
     def _setitem(self, key, val):
         self._raw_setitem(key, val)
 
-    @_setitem.descriptor
+    @_setitem.server
     def _setitem(self, key, val):
         _val = self[key]
         return (key, _val), {}

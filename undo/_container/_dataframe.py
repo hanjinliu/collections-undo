@@ -92,7 +92,7 @@ class AbstractUndoableDataFrame(ABC, Generic[_V, _RV, _CV]):
     def _setitem(self, key, val):
         self._raw_setitem(key, val)
 
-    @_setitem.descriptor
+    @_setitem.server
     def _setitem(self, key, val):
         _val = self[key]
         if isinstance(key, slice):
