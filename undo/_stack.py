@@ -1,6 +1,15 @@
 from __future__ import annotations
 from contextlib import contextmanager
-from typing import Any, Callable, Iterable, NamedTuple, TYPE_CHECKING, TypeVar
+from typing import (
+    Any,
+    Callable,
+    Iterable,
+    Literal,
+    NamedTuple,
+    TYPE_CHECKING,
+    TypeVar,
+    overload,
+)
 from dataclasses import dataclass
 from functools import wraps
 
@@ -200,9 +209,28 @@ class UndoManager:
         self._stack_undo.clear()
         self._stack_redo.clear()
 
-    def command(self, f: Callable) -> Command:
+    @overload
+    def command(self, f: Callable, name: str | None = None) -> Command:
+        ...
+
+    @overload
+    def command(
+        self,
+        f: Literal[None],
+        name: str | None = None,
+    ) -> Callable[[Callable], Command]:
+        ...
+
+    def command(self, f: Callable | None = None, name: str | None = None) -> Command:
         """Decorator for command construction."""
-        return Command(f, mgr=self)
+
+        def _wrapper(f):
+            cmd = Command(f, mgr=self)
+            if name is not None:
+                cmd.__name__ = name
+            return cmd
+
+        return _wrapper if f is None else _wrapper(f)
 
     def property(
         self,
@@ -214,9 +242,32 @@ class UndoManager:
         """Decorator for undoable property construction."""
         return UndoableProperty(fget, fset, fdel, doc=doc, parent=self)
 
-    def interface(self, f: Callable) -> UndoableInterface:
+    @overload
+    def interface(self, f: Callable, name: str | None = None) -> UndoableInterface:
+        ...
+
+    @overload
+    def interface(
+        self,
+        f: Literal[None],
+        name: str | None = None,
+    ) -> Callable[[Callable], UndoableInterface]:
+        ...
+
+    def interface(
+        self,
+        f: Callable | None = None,
+        name: str | None = None,
+    ) -> UndoableInterface:
         """Decorator for undoable setter function construction."""
-        return UndoableInterface(f, mgr=self)
+
+        def _wrapper(f):
+            itf = UndoableInterface(f, mgr=self)
+            if name is not None:
+                itf.__name__ = name
+            return itf
+
+        return _wrapper if f is None else _wrapper(f)
 
     def undef(self, undef: _F) -> _F:
         """Mark an function as an undo-undefined function."""

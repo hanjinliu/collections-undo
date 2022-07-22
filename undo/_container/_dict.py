@@ -40,7 +40,7 @@ class AbstractUndoableDict(MutableMapping[_K, _V]):
     def __setitem__(self, key: _K, value: _V) -> None:
         self._setitem(key, value, self.get(key, empty))
 
-    @_mgr.command
+    @_mgr.command(name="__setitem__")
     def _setitem(self, key: _K, value: _V, old_value: _V):
         return self._raw_setitem(key, value)
 
@@ -55,7 +55,7 @@ class AbstractUndoableDict(MutableMapping[_K, _V]):
     def __delitem__(self, key: _K) -> None:
         self._delitem(key, self[key])
 
-    @_mgr.command
+    @_mgr.command(name="__delitem__")
     def _delitem(self, key: _K, value: _V) -> None:
         self._raw_delitem(key)
 
@@ -66,9 +66,10 @@ class AbstractUndoableDict(MutableMapping[_K, _V]):
     # reimplemented methods
 
     def clear(self) -> None:
+        """Clear the dictonary."""
         return self._clear(dict(self))
 
-    @_mgr.command
+    @_mgr.command(name="clear")
     def _clear(self, values: dict[_K, _V]) -> None:
         while True:
             try:
@@ -102,7 +103,7 @@ class AbstractUndoableDict(MutableMapping[_K, _V]):
         old_values = {k: self.get(k, empty) for k in values.keys()}
         return self._update(values, old_values)
 
-    @_mgr.command
+    @_mgr.command(name="update")
     def _update(self, values: dict[_K, _V], old_values: dict[_K, _V]):
         for key, value in values.items():
             self._raw_setitem(key, value)

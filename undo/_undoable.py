@@ -85,7 +85,9 @@ class UndoableInterface:
             args, kwargs = old
             return self.fset(*args, **kwargs)
 
-        return Command(fw, self.mgr, rv)
+        cmd = Command(fw, self.mgr, rv)
+        wraps(self)(cmd)
+        return cmd
 
 
 class UndoableProperty(property):

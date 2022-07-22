@@ -101,7 +101,8 @@ class AbstractUndoableList(MutableSequence[_T]):
     # reimplemented methods
 
     def extend(self, values: Iterable[_T]) -> None:
-        self._extend(values)
+        """Extend the list with given values."""
+        return self._extend(values)
 
     @_mgr.command
     def _extend(self, values):
@@ -113,7 +114,8 @@ class AbstractUndoableList(MutableSequence[_T]):
         [self._raw_delitem(-1) for i in reversed(range(len(values)))]
 
     def clear(self) -> None:
-        self._clear(list(self))
+        """Clear the list."""
+        return self._clear(list(self))
 
     @_mgr.command
     def _clear(self, data: list[_T]):
