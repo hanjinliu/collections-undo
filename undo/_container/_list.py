@@ -101,13 +101,27 @@ class AbstractUndoableList(MutableSequence[_T]):
     # reimplemented methods
 
     def extend(self, values: Iterable[_T]) -> None:
-        with self._mgr.merging(same_command=True):
-            for val in values:
-                self.append(val)
+        self._extend(values)
+
+    @_mgr.command
+    def _extend(self, values):
+        for val in values:
+            self._raw_insert(len(self), val)
+
+    @_extend.undo_def
+    def _extend(self, values):
+        [self._raw_delitem(-1) for i in reversed(range(len(values)))]
 
     def clear(self) -> None:
-        with self._mgr.merging(same_command=True):
-            [self._delitem_command(i, self[i]) for i in reversed(range(len(self)))]
+        self._clear(list(self))
+
+    @_mgr.command
+    def _clear(self, data: list[_T]):
+        [self._raw_delitem(i) for i in reversed(range(len(self)))]
+
+    @_clear.undo_def
+    def _clear(self, data: list[_T]):
+        self._extend._call_raw(data)
 
     def reverse(self) -> None:
         n = len(self)

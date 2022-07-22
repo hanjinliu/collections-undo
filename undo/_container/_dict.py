@@ -1,7 +1,7 @@
 from __future__ import annotations
 from abc import abstractmethod
 
-from typing import Hashable, Iterator, MutableMapping, TypeVar
+from typing import Hashable, Iterator, Mapping, MutableMapping, TypeVar
 from .._stack import UndoManager
 from .._const import empty
 
@@ -66,13 +66,56 @@ class AbstractUndoableDict(MutableMapping[_K, _V]):
     # reimplemented methods
 
     def clear(self) -> None:
-        with self._mgr.merging(same_command=True):
-            super().clear()
+        return self._clear(dict(self))
+
+    @_mgr.command
+    def _clear(self, values: dict[_K, _V]) -> None:
+        while True:
+            try:
+                key = next(iter(self))
+                self._raw_delitem(key)
+            except StopIteration:
+                break
+        return None
+
+    @_clear.undo_def
+    def _clear(self, value: dict[_K, _V]):
+        self._update._call_raw(value, {})
+        return None
 
     def update(self, other=(), /, **kwargs):
         """Update the dictionary with the given arguments."""
-        with self._mgr.merging(same_command=True):
-            super().update(other, **kwargs)
+        values = {}
+        if isinstance(other, Mapping):
+            for key in other:
+                values[key] = other[key]
+        elif hasattr(other, "keys"):
+            for key in other.keys():
+                values[key] = other[key]
+        else:
+            for key, value in other:
+                values[key] = value
+
+        for key, value in kwargs.items():
+            values[key] = value
+
+        old_values = {k: self.get(k, empty) for k in values.keys()}
+        return self._update(values, old_values)
+
+    @_mgr.command
+    def _update(self, values: dict[_K, _V], old_values: dict[_K, _V]):
+        for key, value in values.items():
+            self._raw_setitem(key, value)
+        return None
+
+    @_update.undo_def
+    def _update(self, values: dict[_K, _V], old_values: dict[_K, _V]):
+        for key, value in old_values.items():
+            if value is empty:
+                self._raw_delitem(key)
+            else:
+                self._raw_setitem(key, value)
+        return None
 
     def undo(self):
         """Undo the last operation."""
