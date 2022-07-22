@@ -109,25 +109,6 @@ class Command:
 
         return cls(merged, _mgr, _func_rv)
 
-    def looped(self) -> Self:
-        """Create a looped command."""
-
-        def _func_fw(arguments: list[tuple[tuple, dict[str, Any]]]):
-            for (args, kwargs) in arguments:
-                out = self._func_fw(*args, **kwargs)
-            return out
-
-        def _func_rv(arguments: list[tuple[tuple, dict[str, Any]]]):
-            for (args, kwargs) in reversed(arguments):
-                out = self._func_rv(*args, **kwargs)
-            return out
-
-        return self.__newlike__(
-            func=_func_fw,
-            mgr=self._mgr,
-            inverse_func=_func_rv,
-        )
-
     def inverted(self) -> Self:
         """Create a command with swapped forward and reverse functions."""
         return self.__newlike__(

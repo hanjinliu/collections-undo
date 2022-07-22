@@ -35,6 +35,7 @@ class CommandSet:
     cmd: Command
     args: tuple[Any]
     kwargs: dict[str, Any]
+    size: float = 0.0
 
     def __repr__(self) -> str:
         _cmd = type(self.cmd).__name__
@@ -54,7 +55,7 @@ class CommandSet:
         return self.cmd._revert(*self.args, **self.kwargs)
 
     @classmethod
-    def merge(cls, cmds: Iterable[CommandSet], *, reverse: bool = False) -> CommandSet:
+    def merge(cls, cmds: Iterable[CommandSet]) -> CommandSet:
         """
         Merge multiple commands into one.
 
@@ -67,8 +68,6 @@ class CommandSet:
         ----------
         cmds : Iterable[CommandSet]
             List of command sets to merge.
-        reverse : bool, default is False
-            Reverse command set order.
 
         Returns
         -------
@@ -77,21 +76,16 @@ class CommandSet:
         """
         arguments: list[tuple, dict[str, Any]] = []
         commands: list[Command] = []
+        total_size = 0.0
 
         for cmd in cmds:
             commands.append(cmd.cmd)
             arguments.append((cmd.args, cmd.kwargs))
+            total_size += cmd.size
 
-        if reverse:
-            commands.reverse()
-            arguments.reverse()
         cmd_merged = Command.merge(commands)
-        return cls(cmd_merged, (arguments,), {})
 
-    @classmethod
-    def loop(cls, cmd: Command, arguments: list[tuple[tuple, dict[str, Any]]]) -> Self:
-        cmd_loop = cmd.looped()
-        return cls(cmd_loop, (arguments,), {})
+        return cls(cmd_merged, (arguments,), {}, size=total_size)
 
 
 class LengthPair(NamedTuple):
@@ -101,11 +95,26 @@ class LengthPair(NamedTuple):
     redo: int
 
 
+def always_zero(*args, **kwargs) -> float:
+    return 0.0
+
+
 class UndoManager:
-    def __init__(self):
+    def __init__(
+        self,
+        *,
+        measure: Callable[..., float] = always_zero,
+        maxsize: float | Literal["inf"] = "inf",
+    ):
         self._stack_undo: list[CommandSet] = []
         self._stack_redo: list[CommandSet] = []
         self._instances: dict[int, Self] = {}
+        if not callable(measure):
+            raise TypeError("measure must be callable")
+        self._measure = measure
+        self._maxsize = float(maxsize)
+        self._stack_undo_size = 0.0
+        self._stack_redo_size = 0.0
 
     def __repr__(self):
         cls_name = type(self).__name__
@@ -146,6 +155,10 @@ class UndoManager:
         cmdset = self._stack_undo.pop()
         out = cmdset._revert()
         self._stack_redo.append(cmdset)
+
+        # update size
+        self._stack_undo_size -= cmdset.size
+        self._stack_redo_size += cmdset.size
         return out
 
     def redo(self) -> Any:
@@ -155,30 +168,19 @@ class UndoManager:
         cmdset = self._stack_redo.pop()
         out = cmdset._call_raw()
         self._stack_undo.append(cmdset)
+
+        # update size
+        self._stack_undo_size += cmdset.size
+        self._stack_redo_size -= cmdset.size
         return out
 
-    def repeat(self) -> Any:
-        """Repeat the last command and update undo/redo stacks."""
-        # BUG: incompatible with undoable interface
-        if len(self._stack_undo) == 0:
-            return empty
-        cmdset = self._stack_undo[-1]
-        return cmdset._call_with_callback()
-
-    def run_all(self) -> Any:
-        """Run all the command."""
-        for cmdset in self._stack_undo:
-            out = cmdset.cmd._call_raw(*cmdset.args, **cmdset.kwargs)
-        self._stack_redo = self._stack_undo.copy()
-        self._stack_redo.reverse()
-        return out
-
-    def subset(self, start: int, stop: int) -> Self:
-        """Create a new stack with a subset of undo stack."""
-        s = self._stack_undo[start:stop]
-        new = type(self)()
-        new._stack_undo = s
-        return new
+    # def run_all(self) -> Any:
+    #     """Run all the command."""
+    #     for cmdset in self._stack_undo:
+    #         out = cmdset.cmd._call_raw(*cmdset.args, **cmdset.kwargs)
+    #     self._stack_redo = self._stack_undo.copy()
+    #     self._stack_redo.reverse()
+    #     return out
 
     @property
     def stack_undo(self) -> list[CommandSet]:
@@ -195,19 +197,35 @@ class UndoManager:
         """Return length of undo and redo stack"""
         return LengthPair(undo=len(self._stack_undo), redo=len(self._stack_redo))
 
+    @property
+    def stack_size(self) -> float:
+        """Return size of undo and redo stack"""
+        return self._stack_undo_size + self._stack_redo_size
+
     def append(self, cmdset: CommandSet) -> None:
         self._stack_undo.append(cmdset)
         self._stack_redo.clear()
+
+        # update size
+        self._stack_undo_size += cmdset.size
+        self._stack_redo_size = 0.0
+
+        # pop items until size is less than maxsize
+        while self._stack_undo_size > self._maxsize:
+            cmdset = self._stack_undo.pop(0)
+            self._stack_undo_size -= cmdset.size
         return None
 
     def _append_command(self, cmd, *args, **kwargs):
         cmdset = CommandSet(cmd=cmd, args=args, kwargs=kwargs)
+        cmdset.size = self._measure(*args, **kwargs)
         return self.append(cmdset)
 
     def clear(self) -> None:
         """Clear the stack."""
         self._stack_undo.clear()
         self._stack_redo.clear()
+        self._stack_undo_size = self._stack_redo_size = 0.0
 
     @overload
     def command(self, f: Callable, name: str | None = None) -> Command:
@@ -279,27 +297,17 @@ class UndoManager:
 
         return _undef
 
-    def _merge_last_commands(self, num: int, *, same_command: bool = False) -> None:
+    def merge_commands(self, start: int, stop: int) -> None:
         """Merge a command set into the undo stack."""
-        if not same_command:
-            merged = CommandSet.merge(self._stack_undo[-num:])
-
-        else:
-            arguments = []
-            for cmdset in self._stack_undo[-num:]:
-                arguments.append((cmdset.args, cmdset.kwargs))
-                cmd = cmdset.cmd
-
-            merged = CommandSet.loop(cmd, arguments)
-
-        del self._stack_undo[-num:]
-        self._stack_undo.append(merged)
+        merged = CommandSet.merge(self._stack_undo[start:stop])
+        del self._stack_undo[start:stop]
+        self._stack_undo.insert(start, merged)
         return None
 
     @contextmanager
-    def merging(self, same_command: bool = False) -> None:
+    def merging(self) -> None:
         len_before = len(self._stack_undo)
         yield None
         len_after = len(self._stack_undo)
-        self._merge_last_commands(len_after - len_before, same_command=same_command)
+        self.merge_commands(len_before, len_after)
         return None
