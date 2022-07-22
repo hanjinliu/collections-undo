@@ -1,6 +1,6 @@
 from setuptools import setup, find_packages
 
-with open("undo/__init__.py", encoding="utf-8") as f:
+with open("collections_undo/__init__.py", encoding="utf-8") as f:
     line = next(iter(f))
     VERSION = line.strip().split()[-1][1:-1]
 
@@ -8,7 +8,7 @@ with open("README.md") as f:
     readme = f.read()
 
 setup(
-    name="undo",
+    name="collections-undo",
     version=VERSION,
     description="General undo/redo framework for Python",
     long_description=readme,
@@ -16,7 +16,7 @@ setup(
     author="Hanjin Liu",
     author_email="liuhanjin-sc@g.ecc.u-tokyo.ac.jp",
     license="MIT",
-    download_url="https://github.com/hanjinliu/undo",
+    download_url="https://github.com/hanjinliu/collections-undo",
     packages=find_packages(exclude=["docs", "examples", "rst", "tests", "tests.*"]),
     package_data={"undo": ["**/*.pyi", "*.pyi"]},
     install_requires=[

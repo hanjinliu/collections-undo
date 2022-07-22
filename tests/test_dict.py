@@ -1,4 +1,4 @@
-from undo import UndoableDict
+from collections_undo import UndoableDict
 
 def test_dict():
     d = UndoableDict({"a": 1, "b": 2, "c": 3})

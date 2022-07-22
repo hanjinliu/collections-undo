@@ -1,4 +1,4 @@
-from undo import AbstractUndoableList
+from collections_undo import AbstractUndoableList
 
 class UndoableString(AbstractUndoableList):
     def __init__(self, string: str = "", /):

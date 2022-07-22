@@ -1,4 +1,4 @@
-from undo import UndoManager
+from collections_undo import UndoManager
 
 mgr = UndoManager()
 

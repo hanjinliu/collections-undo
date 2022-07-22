@@ -1,4 +1,4 @@
-from undo import UndoManager, empty
+from collections_undo import UndoManager, empty
 from unittest.mock import MagicMock
 
 def test_stack_operations():

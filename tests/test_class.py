@@ -1,5 +1,5 @@
 from unittest.mock import MagicMock
-from undo import UndoManager
+from collections_undo import UndoManager
 
 def test_property():
     class A:
