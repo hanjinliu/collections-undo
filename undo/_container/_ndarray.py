@@ -25,6 +25,10 @@ class AbstractUndoableNDArray(ABC):
     def ndim(self) -> int:
         return len(self.shape)
 
+    @property
+    def size(self) -> int:
+        return prod(self.shape)
+
     @abstractmethod
     def __getitem__(self, key: SupportsIndex):
         ...
@@ -46,7 +50,12 @@ class AbstractUndoableNDArray(ABC):
     def _raw_reshape(self, shape: _Shape) -> None:
         ...
 
+    @abstractmethod
+    def _raw_concatenate(self, other, axis: int = 0) -> None:
+        ...
+
     def reshape(self, *shape):
+        """Reshape array **inplace**"""
         if len(shape) == 1 and hasattr(shape, "__iter__"):
             shape = tuple(shape)
 
@@ -70,9 +79,23 @@ class AbstractUndoableNDArray(ABC):
     def _reshape(self, shape: _Shape, old_shape: _Shape):
         self._raw_reshape(old_shape)
 
-    @abstractmethod
-    def _raw_concatenate(self, other) -> None:
-        ...
+    def ravel(self):
+        return self.reshape((self.size,))
+
+    def concatenate(self, other, axis=0):
+        if axis < 0:
+            axis += self.ndim
+        sl = (slice(None),) * axis + (other.shape[axis])
+        return self._concatenate(other, None, axis=axis)
+
+    @_mgr.command
+    def _concatenate(self, other, sl: slice, axis=0):
+        return self._raw_concatenate(other, axis=axis)
+
+    @_concatenate.undo_def
+    def _concatenate(self, other, sl: slice, axis=0):
+        old_shape = self.shape
+        # TODO:
 
     def __setitem__(self, key: SupportsIndex | tuple[SupportsIndex], val):
         if isinstance(key, tuple):
@@ -91,6 +114,14 @@ class AbstractUndoableNDArray(ABC):
     def _setitem(self, key, val):
         _val = self[key]
         return (key, _val), {}
+
+    def undo(self):
+        """Undo the last operation."""
+        return self._mgr.undo()
+
+    def redo(self):
+        """Redo the last undo operation."""
+        return self._mgr.redo()
 
 
 def _normalize_key(key, n):
