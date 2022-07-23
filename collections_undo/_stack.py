@@ -246,23 +246,29 @@ class UndoManager:
         ...
 
     @overload
+    def undoable(self, f: property, name: str | None = None) -> UndoableProperty:
+        ...
+
+    @overload
     def undoable(
         self,
         f: Literal[None],
         name: str | None = None,
-    ) -> Callable[[Callable], ReversibleFunction]:
+    ) -> Callable[[Callable], ReversibleFunction] | Callable[
+        [property], UndoableProperty
+    ]:
         ...
 
-    def undoable(
-        self, f: Callable | None = None, name: str | None = None
-    ) -> ReversibleFunction:
-        """Decorator for command construction."""
+    def undoable(self, f=None, name=None):
+        """Decorator for undoable object construction."""
 
         def _wrapper(f):
-            cmd = ReversibleFunction(f, mgr=self)
+            if isinstance(f, property):
+                return UndoableProperty.from_property(f, mgr=self)
+            fn = ReversibleFunction(f, mgr=self)
             if name is not None:
-                cmd.__name__ = name
-            return cmd
+                fn.__name__ = name
+            return fn
 
         return _wrapper if f is None else _wrapper(f)
 
@@ -276,7 +282,7 @@ class UndoManager:
         doc: str | None = None,
     ) -> UndoableProperty:
         """Decorator for undoable property construction."""
-        return UndoableProperty(fget, fset, fdel, doc=doc, parent=self)
+        return UndoableProperty(fget, fset, fdel, doc=doc, mgr=self)
 
     @overload
     def interface(self, f: Callable, name: str | None = None) -> UndoableInterface:
@@ -324,6 +330,7 @@ class UndoManager:
 
     @contextmanager
     def merging(self) -> None:
+        """Merge all the commands into a single command in this context."""
         len_before = len(self._stack_undo)
         yield None
         len_after = len(self._stack_undo)

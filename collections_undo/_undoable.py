@@ -116,9 +116,9 @@ class UndoableProperty(property):
         fdel: Literal[None] = None,
         doc: str | None = None,
         *,
-        parent: UndoManager = None,
+        mgr: UndoManager = None,
     ):
-        self._cmd_stack = parent
+        self._mgr = mgr
         super().__init__(fget, fset, fdel, doc)
 
     def getter(self, fget: Callable[[Any], Any], /) -> UndoableProperty:
@@ -127,11 +127,11 @@ class UndoableProperty(property):
             fset=self.fset,
             fdel=self.fdel,
             doc=self.__doc__,
-            parent=self._cmd_stack,
+            mgr=self._mgr,
         )
 
     def setter(self, fset: Callable[[Any, Any], None], /) -> UndoableProperty:
-        @self._cmd_stack.undoable
+        @self._mgr.undoable
         def fset_cmd(obj, val, old_val):
             fset(obj, val)
 
@@ -149,8 +149,13 @@ class UndoableProperty(property):
             fset=nfset,
             fdel=self.fdel,
             doc=self.__doc__,
-            parent=self._cmd_stack,
+            mgr=self._mgr,
         )
 
     def deleter(self, fdel: Callable[[Any], None], /) -> UndoableProperty:
         raise TypeError("undoable_property object does not support deleter.")
+
+    @classmethod
+    def from_property(self, prop: property, mgr: UndoManager) -> UndoableProperty:
+        """Construct a new undoable property from a property object."""
+        return UndoableProperty(prop.fget, prop.fset, prop.fdel, prop.__doc__, mgr=mgr)

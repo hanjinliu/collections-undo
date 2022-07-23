@@ -37,6 +37,43 @@ def test_property():
     assert x.a == 11
     assert x.mgr.stack_lengths == (1, 1)
 
+def test_property_using_undoable():
+    class A:
+        mgr = UndoManager()
+        def __init__(self):
+            self._a = 10
+
+        @mgr.undoable
+        @property
+        def a(self):
+            return self._a
+
+        @a.setter
+        def a(self, val):
+            self._a = val
+
+    x = A()
+    x.a = 11
+    x.a = 12
+    assert x.a == 12
+    assert A.mgr.stack_lengths == (0, 0)
+    assert x.mgr.stack_lengths == (2, 0)
+
+    x.mgr.undo()
+    assert x.a == 11
+
+    x.mgr.undo()
+    assert x.a == 10
+    assert x.mgr.stack_lengths == (0, 2)
+
+    x.mgr.undo()
+    assert x.a == 10
+    assert x.mgr.stack_lengths == (0, 2)
+
+    x.mgr.redo()
+    assert x.a == 11
+    assert x.mgr.stack_lengths == (1, 1)
+
 def test_stack_independency():
     class A:
         mgr = UndoManager()
