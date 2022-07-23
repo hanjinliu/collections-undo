@@ -1,7 +1,7 @@
 from __future__ import annotations
 from functools import wraps
 from typing import Any, Callable, TYPE_CHECKING, Literal, TypeVar
-from ._command import ReversibleFunction
+from ._reversible import ReversibleFunction
 from ._const import empty
 
 if TYPE_CHECKING:

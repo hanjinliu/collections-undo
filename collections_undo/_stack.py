@@ -13,7 +13,7 @@ from typing import (
 from dataclasses import dataclass
 from functools import wraps
 
-from ._command import ReversibleFunction
+from ._reversible import ReversibleFunction
 from ._undoable import UndoableInterface, UndoableProperty
 from ._const import empty
 
