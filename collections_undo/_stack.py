@@ -46,18 +46,36 @@ def _deprecated_function(func, name: str):
 
 @dataclass(repr=False)
 class Command:
+    """
+    Undoable command object.
+
+    A command is a function call with arguments and keyword arguments.
+
+    Parameters
+    ----------
+    func : callable
+        The reversible function.
+    args : tuple
+        The positional arguments.
+    kwargs : dict
+        The keyword arguments.
+    size : float
+        The size of the command. This value is used to determine when older commands
+        should be removed from the stack.
+    """
+
     func: ReversibleFunction
     args: tuple[Any, ...]
     kwargs: dict[str, Any]
     size: float = 0.0
 
     def __repr__(self) -> str:
-        _fn_cls = type(self.func).__name__
+        _cls = type(self).__name__
         _args = list(map(_fmt_arg, self.args))
         _args += list(f"{k}={_fmt_arg(v)}" for k, v in self.kwargs.items())
         _args = ", ".join(_args)
         _fn = self.func.__name__
-        return f"{_fn_cls}<{_fn}({_args})>"
+        return f"{_cls}<{_fn}({_args})>"
 
     def _call_with_callback(self):
         return self.func._call_with_callback(*self.args, **self.kwargs)
@@ -130,28 +148,14 @@ class UndoManager:
         self._stack_undo_size = 0.0
         self._stack_redo_size = 0.0
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         cls_name = type(self).__name__
-        n_undo, n_redo = self.stack_lengths
-        undo_stack = list(self._stack_undo)
-        redo_stack = list(self._stack_redo)
 
-        if n_undo < n_redo:
-            undo_stack = [None] * (n_redo - n_undo) + undo_stack
-        elif n_undo > n_redo:
-            redo_stack = [None] * (n_undo - n_redo) + redo_stack
-
-        s: list[tuple[str, str]] = []
-        nchar_max = 0
-        _null = " --- "
-        for undo, redo in zip(undo_stack, redo_stack):
-            _undo = _null if undo is None else repr(undo)
-            _redo = _null if redo is None else repr(redo)
-            s.append((_undo, _redo))
-            nchar_max = max(nchar_max, len(_undo))
-
-        s = "\n".join(f"{s0:>{nchar_max + 2}}, {s1}" for s0, s1 in s)
-        return cls_name + f"[\n{s}\n]"
+        s_undo = ",\n    ".join(repr(cmd) for cmd in self._stack_undo)
+        s_redo = ",\n    ".join(repr(cmd) for cmd in self._stack_redo)
+        return (
+            f"{cls_name}(\n  undo=[\n    {s_undo}\n  ],\n  redo=[\n    {s_redo}\n  ]\n)"
+        )
 
     def __get__(self, obj, objtype=None) -> UndoManager:
         if obj is None:
