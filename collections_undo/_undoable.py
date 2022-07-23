@@ -69,8 +69,9 @@ class UndoableInterface:
         return self._func
 
     def __call__(self, *args: _P.args, **kwargs: _P.kwargs) -> _R:
-        _old_state = self.fserve(*args, **kwargs)
-        out = self.freceive(*args, **kwargs)
+        with self._mgr.blocked():
+            _old_state = self.fserve(*args, **kwargs)
+            out = self.freceive(*args, **kwargs)
         self._mgr._append_command(self.func, (args, kwargs), _old_state)
         return out
 

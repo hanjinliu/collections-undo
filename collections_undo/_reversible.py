@@ -55,12 +55,16 @@ class ReversibleFunction:
         return out
 
     def _call_raw(self, *args: _P.args, **kwargs: _P.kwargs) -> _R:
-        return self._func_fw(*args, **kwargs)
+        with self._mgr.blocked():
+            out = self._func_fw(*args, **kwargs)
+        return out
 
     def _revert(self, *args: _P.args, **kwargs: _P.kwargs) -> _RR:
         if self._func_rv is None:
             raise NotReversibleError(f"{self!r} is not reversible.")
-        return self._func_rv(*args, **kwargs)
+        with self._mgr.blocked():
+            out = self._func_rv(*args, **kwargs)
+        return out
 
     __call__ = _call_with_callback
 

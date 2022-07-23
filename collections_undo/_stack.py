@@ -87,7 +87,7 @@ class Command:
         return self.func._revert(*self.args, **self.kwargs)
 
     @classmethod
-    def merge(cls, cmds: Iterable[Command]) -> Command:
+    def merge(cls, cmds: Iterable[Command], name: str | None = None) -> Command:
         """
         Merge multiple commands into one.
 
@@ -115,9 +115,10 @@ class Command:
             arguments.append((cmd.args, cmd.kwargs))
             total_size += cmd.size
 
-        cmd_merged = ReversibleFunction.merge(commands)
-
-        return cls(cmd_merged, (arguments,), {}, size=total_size)
+        fn_merged = ReversibleFunction.merge(commands)
+        if name is not None:
+            fn_merged.__name__ = name
+        return cls(fn_merged, (arguments,), {}, size=total_size)
 
 
 class LengthPair(NamedTuple):
@@ -147,6 +148,7 @@ class UndoManager:
         self._maxsize = float(maxsize)
         self._stack_undo_size = 0.0
         self._stack_redo_size = 0.0
+        self._is_blocked = False
 
     def __repr__(self) -> str:
         cls_name = type(self).__name__
@@ -165,6 +167,10 @@ class UndoManager:
             stack = type(self)()
             self._instances[_id] = stack
         return stack
+
+    @property
+    def is_blocked(self) -> bool:
+        return self._is_blocked
 
     def undo(self) -> Any:
         """Undo last command and update undo/redo stacks."""
@@ -221,6 +227,9 @@ class UndoManager:
         return self._stack_undo_size + self._stack_redo_size
 
     def append(self, cmd: Command) -> None:
+        if self.is_blocked:
+            return None
+
         self._stack_undo.append(cmd)
         self._stack_redo.clear()
 
@@ -244,6 +253,7 @@ class UndoManager:
         self._stack_undo.clear()
         self._stack_redo.clear()
         self._stack_undo_size = self._stack_redo_size = 0.0
+        return None
 
     @overload
     def undoable(self, f: Callable, name: str | None = None) -> ReversibleFunction:
@@ -325,18 +335,28 @@ class UndoManager:
 
         return _undef
 
-    def merge_commands(self, start: int, stop: int) -> None:
+    def merge_commands(self, start: int, stop: int, name: str | None = None) -> None:
         """Merge a command set into the undo stack."""
-        merged = Command.merge(self._stack_undo[start:stop])
+        merged = Command.merge(self._stack_undo[start:stop], name=name)
         del self._stack_undo[start:stop]
         self._stack_undo.insert(start, merged)
         return None
 
     @contextmanager
-    def merging(self) -> None:
+    def merging(self, name: str | None = None) -> None:
         """Merge all the commands into a single command in this context."""
         len_before = len(self._stack_undo)
         yield None
         len_after = len(self._stack_undo)
-        self.merge_commands(len_before, len_after)
+        self.merge_commands(len_before, len_after, name=name)
         return None
+
+    @contextmanager
+    def blocked(self):
+        blocked = self._is_blocked
+        self._is_blocked = True
+        try:
+            yield None
+        finally:
+            self._is_blocked = blocked
+            return None

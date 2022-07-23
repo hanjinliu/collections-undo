@@ -194,3 +194,43 @@ def test_setitem():
     assert a.arr == [0, 1, 0, 3, 0]
     a.mgr.redo()
     assert a.arr == [0, 1, 0, 3, 0]
+
+def test_blocked():
+    class A:
+        mgr = UndoManager()
+
+        def __init__(self):
+            self.val = None
+
+        @mgr.interface
+        def f(self, s):
+            self.g(0)
+            self.val = s
+
+        @f.server
+        def f(self, s):
+            self.g(1)
+            return (self.val,), {}
+
+        @mgr.interface
+        def g(self, i):
+            self.val = i
+
+        @g.server
+        def g(self, i):
+            return (self.val,), {}
+
+    a = A()
+    a.g(0)
+    assert a.mgr.stack_lengths == (1, 0)
+    assert a.val == 0
+
+    a.f("s")
+    assert a.mgr.stack_lengths == (2, 0)
+    assert a.val == "s"
+
+    a.mgr.undo()
+    assert a.mgr.stack_lengths == (1, 1)
+
+    assert a.mgr.stack_undo[0].func.__name__ == "g"
+    assert a.mgr.stack_redo[0].func.__name__ == "f"
