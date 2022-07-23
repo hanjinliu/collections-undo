@@ -122,6 +122,12 @@ class UndoableProperty(property):
         super().__init__(fget, fset, fdel, doc)
 
     def getter(self, fget: Callable[[Any], Any], /) -> UndoableProperty:
+        """
+        Set the getter function.
+
+        Note that the getter function must return something without exception. Returned
+        value will be used in undoing setter function.
+        """
         return UndoableProperty(
             fget=fget,
             fset=self.fset,
@@ -131,29 +137,52 @@ class UndoableProperty(property):
         )
 
     def setter(self, fset: Callable[[Any, Any], None], /) -> UndoableProperty:
+        """Define the undoable setter function."""
+
         @self._mgr.undoable
-        def fset_cmd(obj, val, old_val):
+        def fset_reversible(obj, val, old_val):
             fset(obj, val)
 
-        @fset_cmd.undo_def
-        def fset_cmd(obj, val, old_val):
+        @fset_reversible.undo_def
+        def fset_reversible(obj, val, old_val):
             fset(obj, old_val)
 
         @wraps(fset)
-        def nfset(obj, val):
+        def fset_ext(obj, val):
             old_val = self.fget(obj)
-            fset_cmd.__get__(obj)(val, old_val)
+            fset_reversible.__get__(obj)(val, old_val)
 
         return UndoableProperty(
             fget=self.fget,
-            fset=nfset,
+            fset=fset_ext,
             fdel=self.fdel,
             doc=self.__doc__,
             mgr=self._mgr,
         )
 
     def deleter(self, fdel: Callable[[Any], None], /) -> UndoableProperty:
-        raise TypeError("undoable_property object does not support deleter.")
+        """Define the undoable deleter function."""
+
+        @self._mgr.undoable
+        def fdel_reversible(obj, old_val):
+            fdel(obj)
+
+        @fdel_reversible.undo_def
+        def fdel_reversible(obj, old_val):
+            self.fset(obj, old_val)
+
+        @wraps(fdel)
+        def fdel_ext(obj):
+            old_val = self.fget(obj)
+            fdel_reversible.__get__(obj)(old_val)
+
+        return UndoableProperty(
+            fget=self.fget,
+            fset=self.fset,
+            fdel=fdel_ext,
+            doc=self.__doc__,
+            mgr=self._mgr,
+        )
 
     @classmethod
     def from_property(self, prop: property, mgr: UndoManager) -> UndoableProperty:
