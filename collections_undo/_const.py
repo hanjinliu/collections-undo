@@ -1,6 +1,6 @@
 class _Empty:
     def __repr__(self) -> str:
-        return "<undo.CommandStack.empty>"
+        return "<collections_undo.empty>"
 
     def __str__(self) -> str:
         return "<empty>"
