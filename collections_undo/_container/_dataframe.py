@@ -157,7 +157,7 @@ class AbstractUndoableDataFrame(ABC, Generic[_V, _RV, _CV]):
         stop = start + count
         return self._remove_columns(start, count, self[:, start:stop])
 
-    @_mgr.command
+    @_mgr.undoable
     def _insert_rows(self, start: int, count: int, values):
         return self._raw_insert_rows(start, count, values)
 
@@ -165,7 +165,7 @@ class AbstractUndoableDataFrame(ABC, Generic[_V, _RV, _CV]):
     def _insert_rows(self, start: int, count: int, values):
         return self._raw_remove_rows(start, count)
 
-    @_mgr.command
+    @_mgr.undoable
     def _remove_rows(self, start: int, count: int, values):
         return self._raw_remove_rows(start, count)
 
@@ -173,7 +173,7 @@ class AbstractUndoableDataFrame(ABC, Generic[_V, _RV, _CV]):
     def _remove_rows(self, start: int, count: int, values):
         return self._raw_insert_rows(start, count, values)
 
-    @_mgr.command
+    @_mgr.undoable
     def _insert_columns(self, start: int, count: int, values):
         return self._raw_insert_columns(start, count, values)
 
@@ -181,7 +181,7 @@ class AbstractUndoableDataFrame(ABC, Generic[_V, _RV, _CV]):
     def _insert_columns(self, start: int, count: int, values):
         return self._raw_remove_columns(start, count)
 
-    @_mgr.command
+    @_mgr.undoable
     def _remove_columns(self, start: int, count: int, values):
         return self._raw_remove_columns(start, count)
 

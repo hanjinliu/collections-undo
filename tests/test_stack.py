@@ -5,7 +5,7 @@ def test_stack_operations():
     mock = MagicMock()
     mgr = UndoManager()
 
-    @mgr.command
+    @mgr.undoable
     def a(x, y):
         mock("do", x, y)
         return 0
@@ -65,7 +65,7 @@ def test_size():
 
     mgr = UndoManager(measure=nargs, maxsize=10)
 
-    @mgr.command
+    @mgr.undoable
     def f(*args, **kwargs):
         pass
 

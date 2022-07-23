@@ -71,7 +71,7 @@ class AbstractUndoableNDArray(ABC):
             )
         return self._reshape(shape)
 
-    @_mgr.command
+    @_mgr.undoable
     def _reshape(self, shape: _Shape, old_shape: _Shape):
         self._raw_reshape(shape)
 
@@ -88,7 +88,7 @@ class AbstractUndoableNDArray(ABC):
         sl = (slice(None),) * axis + (other.shape[axis])
         return self._concatenate(other, None, axis=axis)
 
-    @_mgr.command
+    @_mgr.undoable
     def _concatenate(self, other, sl: slice, axis=0):
         return self._raw_concatenate(other, axis=axis)
 

@@ -15,7 +15,7 @@ class NotReversibleError(RuntimeError):
     """Raised when reversive operation is not defined."""
 
 
-class Command:
+class ReversibleFunction:
     def __init__(
         self,
         func: Callable[_P, _R],
@@ -83,7 +83,7 @@ class Command:
         return out
 
     @classmethod
-    def merge(cls, cmds: Iterable[Command]) -> Self:
+    def merge(cls, cmds: Iterable[ReversibleFunction]) -> Self:
         """Merge multiple commands into a single command."""
         _fws = []
         _rvs = []

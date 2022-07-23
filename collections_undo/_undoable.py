@@ -1,7 +1,7 @@
 from __future__ import annotations
 from functools import wraps
 from typing import Any, Callable, TYPE_CHECKING, Literal, TypeVar
-from ._command import Command
+from ._command import ReversibleFunction
 from ._const import empty
 
 if TYPE_CHECKING:
@@ -43,7 +43,7 @@ class UndoableInterface:
         self.freceive = freceive
         self.fserve = fserve
         self._mgr = mgr
-        self._cmd = None
+        self._func = None
         self._instances: dict[int, UndoableInterface] = {}
 
     def server(self, fserve: Callable[_P, _Args]) -> Callable[_P, _Args]:
@@ -63,15 +63,15 @@ class UndoableInterface:
         )
 
     @property
-    def cmd(self) -> Command:
-        if self._cmd is None:
-            self._cmd = self._create_command()
-        return self._cmd
+    def func(self) -> ReversibleFunction:
+        if self._func is None:
+            self._func = self._create_function()
+        return self._func
 
     def __call__(self, *args: _P.args, **kwargs: _P.kwargs) -> _R:
         _old_state = self.fserve(*args, **kwargs)
         out = self.freceive(*args, **kwargs)
-        self._mgr._append_command(self.cmd, (args, kwargs), _old_state)
+        self._mgr._append_command(self.func, (args, kwargs), _old_state)
         return out
 
     def __get__(self, obj, objtype=None) -> UndoableInterface:
@@ -90,7 +90,7 @@ class UndoableInterface:
     def __repr__(self) -> str:
         return f"{type(self).__name__}<{self.freceive!r}>"
 
-    def _create_command(self) -> Command:
+    def _create_function(self) -> ReversibleFunction:
         def fw(new, old):
             args, kwargs = new
             return self.freceive(*args, **kwargs)
@@ -101,9 +101,9 @@ class UndoableInterface:
             args, kwargs = old
             return self.freceive(*args, **kwargs)
 
-        cmd = Command(fw, self._mgr, rv)
-        wraps(self)(cmd)
-        return cmd
+        fn = ReversibleFunction(fw, self._mgr, rv)
+        wraps(self)(fn)
+        return fn
 
 
 class UndoableProperty(property):
@@ -131,7 +131,7 @@ class UndoableProperty(property):
         )
 
     def setter(self, fset: Callable[[Any, Any], None], /) -> UndoableProperty:
-        @self._cmd_stack.command
+        @self._cmd_stack.undoable
         def fset_cmd(obj, val, old_val):
             fset(obj, val)
 

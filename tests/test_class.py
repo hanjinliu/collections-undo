@@ -72,7 +72,7 @@ def test_method():
     class A:
         mgr = UndoManager()
 
-        @mgr.command
+        @mgr.undoable
         def f(self, a):
             mock("do", self, a)
 

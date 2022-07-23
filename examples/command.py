@@ -2,7 +2,7 @@ from collections_undo import UndoManager
 
 mgr = UndoManager()
 
-@mgr.command
+@mgr.undoable
 def f(x):
     print(f"do {x}")
 

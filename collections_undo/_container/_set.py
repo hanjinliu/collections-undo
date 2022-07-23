@@ -42,7 +42,7 @@ class AbstractUndoableSet(MutableSet[_T]):
             self._add(value)
         return None
 
-    @_mgr.command(name="add")
+    @_mgr.undoable(name="add")
     def _add(self, value: _T):
         self._raw_add(value)
 
@@ -55,7 +55,7 @@ class AbstractUndoableSet(MutableSet[_T]):
             self._discard(value)
         return None
 
-    @_mgr.command(name="discard")
+    @_mgr.undoable(name="discard")
     def _discard(self, value: _T) -> None:
         self._raw_discard(value)
 
@@ -63,7 +63,7 @@ class AbstractUndoableSet(MutableSet[_T]):
     def _discard(self, value: _T) -> None:
         self._raw_add(value)
 
-    @_mgr.command(name="add_or_discard")
+    @_mgr.undoable(name="add_or_discard")
     def _add_or_discard(self, values: Iterable[_T], add: Iterable[bool]) -> None:
         """This method is used for operators."""
         for val, add in zip(values, add):

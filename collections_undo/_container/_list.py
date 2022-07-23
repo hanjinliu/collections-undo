@@ -78,7 +78,7 @@ class AbstractUndoableList(MutableSequence[_T]):
             key += len(self)
         return self._delitem_command(key, self[key])
 
-    @_mgr.command
+    @_mgr.undoable
     def _delitem_command(self, key, val):
         self._raw_delitem(key)
 
@@ -90,7 +90,7 @@ class AbstractUndoableList(MutableSequence[_T]):
         else:
             self._raw_insert(key, val)
 
-    @_mgr.command
+    @_mgr.undoable
     def insert(self, index: int, val: _T):
         self._raw_insert(index, val)
 
@@ -104,7 +104,7 @@ class AbstractUndoableList(MutableSequence[_T]):
         """Extend the list with given values."""
         return self._extend(values)
 
-    @_mgr.command
+    @_mgr.undoable
     def _extend(self, values):
         for val in values:
             self._raw_insert(len(self), val)
@@ -117,7 +117,7 @@ class AbstractUndoableList(MutableSequence[_T]):
         """Clear the list."""
         return self._clear(list(self))
 
-    @_mgr.command
+    @_mgr.undoable
     def _clear(self, data: list[_T]):
         [self._raw_delitem(i) for i in reversed(range(len(self)))]
 

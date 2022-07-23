@@ -13,7 +13,7 @@ from typing import (
 from dataclasses import dataclass
 from functools import wraps
 
-from ._command import Command
+from ._command import ReversibleFunction
 from ._undoable import UndoableInterface, UndoableProperty
 from ._const import empty
 
@@ -30,32 +30,46 @@ def _fmt_arg(v: Any) -> str:
     return v_repr
 
 
+def _deprecated_function(func, name: str):
+    @wraps(func)
+    def _wrapper(*args, **kwargs):
+        import warnings
+
+        warnings.warn(
+            f"{name} is deprecated, use {func.__name__} instead",
+            DeprecationWarning,
+        )
+        return func(*args, **kwargs)
+
+    return _wrapper
+
+
 @dataclass(repr=False)
-class CommandSet:
-    cmd: Command
-    args: tuple[Any]
+class Command:
+    func: ReversibleFunction
+    args: tuple[Any, ...]
     kwargs: dict[str, Any]
     size: float = 0.0
 
     def __repr__(self) -> str:
-        _cmd = type(self.cmd).__name__
+        _fn_cls = type(self.func).__name__
         _args = list(map(_fmt_arg, self.args))
         _args += list(f"{k}={_fmt_arg(v)}" for k, v in self.kwargs.items())
-        args_str = ", ".join(_args)
-        fstr = self.cmd._func_fw.__name__
-        return f"{_cmd}<{fstr}({args_str})>"
+        _args = ", ".join(_args)
+        _fn = self.func.__name__
+        return f"{_fn_cls}<{_fn}({_args})>"
 
     def _call_with_callback(self):
-        return self.cmd._call_with_callback(*self.args, **self.kwargs)
+        return self.func._call_with_callback(*self.args, **self.kwargs)
 
     def _call_raw(self):
-        return self.cmd._call_raw(*self.args, **self.kwargs)
+        return self.func._call_raw(*self.args, **self.kwargs)
 
     def _revert(self):
-        return self.cmd._revert(*self.args, **self.kwargs)
+        return self.func._revert(*self.args, **self.kwargs)
 
     @classmethod
-    def merge(cls, cmds: Iterable[CommandSet]) -> CommandSet:
+    def merge(cls, cmds: Iterable[Command]) -> Command:
         """
         Merge multiple commands into one.
 
@@ -75,15 +89,15 @@ class CommandSet:
             Merged command set.
         """
         arguments: list[tuple, dict[str, Any]] = []
-        commands: list[Command] = []
+        commands: list[ReversibleFunction] = []
         total_size = 0.0
 
         for cmd in cmds:
-            commands.append(cmd.cmd)
+            commands.append(cmd.func)
             arguments.append((cmd.args, cmd.kwargs))
             total_size += cmd.size
 
-        cmd_merged = Command.merge(commands)
+        cmd_merged = ReversibleFunction.merge(commands)
 
         return cls(cmd_merged, (arguments,), {}, size=total_size)
 
@@ -106,8 +120,8 @@ class UndoManager:
         measure: Callable[..., float] = always_zero,
         maxsize: float | Literal["inf"] = "inf",
     ):
-        self._stack_undo: list[CommandSet] = []
-        self._stack_redo: list[CommandSet] = []
+        self._stack_undo: list[Command] = []
+        self._stack_redo: list[Command] = []
         self._instances: dict[int, Self] = {}
         if not callable(measure):
             raise TypeError("measure must be callable")
@@ -152,43 +166,43 @@ class UndoManager:
         """Undo last command and update undo/redo stacks."""
         if len(self._stack_undo) == 0:
             return empty
-        cmdset = self._stack_undo.pop()
-        out = cmdset._revert()
-        self._stack_redo.append(cmdset)
+        cmd = self._stack_undo.pop()
+        out = cmd._revert()
+        self._stack_redo.append(cmd)
 
         # update size
-        self._stack_undo_size -= cmdset.size
-        self._stack_redo_size += cmdset.size
+        self._stack_undo_size -= cmd.size
+        self._stack_redo_size += cmd.size
         return out
 
     def redo(self) -> Any:
         """Redo last command and update undo/redo stacks."""
         if len(self._stack_redo) == 0:
             return empty
-        cmdset = self._stack_redo.pop()
-        out = cmdset._call_raw()
-        self._stack_undo.append(cmdset)
+        cmd = self._stack_redo.pop()
+        out = cmd._call_raw()
+        self._stack_undo.append(cmd)
 
         # update size
-        self._stack_undo_size += cmdset.size
-        self._stack_redo_size -= cmdset.size
+        self._stack_undo_size += cmd.size
+        self._stack_redo_size -= cmd.size
         return out
 
     # def run_all(self) -> Any:
     #     """Run all the command."""
-    #     for cmdset in self._stack_undo:
-    #         out = cmdset.cmd._call_raw(*cmdset.args, **cmdset.kwargs)
+    #     for cmd in self._stack_undo:
+    #         out = cmd.func._call_raw(*cmd.args, **cmd.kwargs)
     #     self._stack_redo = self._stack_undo.copy()
     #     self._stack_redo.reverse()
     #     return out
 
     @property
-    def stack_undo(self) -> list[CommandSet]:
+    def stack_undo(self) -> list[Command]:
         """List of undo stack."""
         return list(self._stack_undo)
 
     @property
-    def stack_redo(self) -> list[CommandSet]:
+    def stack_redo(self) -> list[Command]:
         """List of redo stack."""
         return list(self._stack_redo)
 
@@ -202,24 +216,24 @@ class UndoManager:
         """Return size of undo and redo stack"""
         return self._stack_undo_size + self._stack_redo_size
 
-    def append(self, cmdset: CommandSet) -> None:
-        self._stack_undo.append(cmdset)
+    def append(self, cmd: Command) -> None:
+        self._stack_undo.append(cmd)
         self._stack_redo.clear()
 
         # update size
-        self._stack_undo_size += cmdset.size
+        self._stack_undo_size += cmd.size
         self._stack_redo_size = 0.0
 
         # pop items until size is less than maxsize
         while self._stack_undo_size > self._maxsize:
-            cmdset = self._stack_undo.pop(0)
-            self._stack_undo_size -= cmdset.size
+            cmd = self._stack_undo.pop(0)
+            self._stack_undo_size -= cmd.size
         return None
 
     def _append_command(self, cmd, *args, **kwargs):
-        cmdset = CommandSet(cmd=cmd, args=args, kwargs=kwargs)
-        cmdset.size = self._measure(*args, **kwargs)
-        return self.append(cmdset)
+        cmd = Command(func=cmd, args=args, kwargs=kwargs)
+        cmd.size = self._measure(*args, **kwargs)
+        return self.append(cmd)
 
     def clear(self) -> None:
         """Clear the stack."""
@@ -228,27 +242,31 @@ class UndoManager:
         self._stack_undo_size = self._stack_redo_size = 0.0
 
     @overload
-    def command(self, f: Callable, name: str | None = None) -> Command:
+    def undoable(self, f: Callable, name: str | None = None) -> ReversibleFunction:
         ...
 
     @overload
-    def command(
+    def undoable(
         self,
         f: Literal[None],
         name: str | None = None,
-    ) -> Callable[[Callable], Command]:
+    ) -> Callable[[Callable], ReversibleFunction]:
         ...
 
-    def command(self, f: Callable | None = None, name: str | None = None) -> Command:
+    def undoable(
+        self, f: Callable | None = None, name: str | None = None
+    ) -> ReversibleFunction:
         """Decorator for command construction."""
 
         def _wrapper(f):
-            cmd = Command(f, mgr=self)
+            cmd = ReversibleFunction(f, mgr=self)
             if name is not None:
                 cmd.__name__ = name
             return cmd
 
         return _wrapper if f is None else _wrapper(f)
+
+    command = _deprecated_function(undoable, "undoable")
 
     def property(
         self,
@@ -299,7 +317,7 @@ class UndoManager:
 
     def merge_commands(self, start: int, stop: int) -> None:
         """Merge a command set into the undo stack."""
-        merged = CommandSet.merge(self._stack_undo[start:stop])
+        merged = Command.merge(self._stack_undo[start:stop])
         del self._stack_undo[start:stop]
         self._stack_undo.insert(start, merged)
         return None
