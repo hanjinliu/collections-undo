@@ -359,4 +359,4 @@ class UndoManager:
             yield None
         finally:
             self._is_blocked = blocked
-            return None
+        return None
