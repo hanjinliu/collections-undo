@@ -1,43 +1,36 @@
 from __future__ import annotations
 from abc import ABCMeta
 from functools import wraps
-from typing import TYPE_CHECKING, Any, cast, Callable
+from typing import Any, Callable, TypeVar
 from ._stack import UndoManager
 from ._reversible import ReversibleFunction
 
-if TYPE_CHECKING:
-    from typing_extensions import TypeGuard
+_F = TypeVar("_F", bound=Callable)
 
 
-class undoable_function(Callable):
-    __undo_def__: Any
+def _is_undoable(func) -> bool:
+    return hasattr(func, "__undo_def__")
 
 
-_UNDO_DEF = "__undo_def__"
-
-
-def _is_undoable(func) -> TypeGuard[undoable_function]:
-    return hasattr(func, _UNDO_DEF)
-
-
-def _copy_undoable(func: undoable_function) -> undoable_function:
+def _copy_undoable(func: _F) -> _F:
     @wraps(func)
     def _func(*args, **kwargs):
         return func(*args, **kwargs)
 
-    _func = cast(undoable_function, _func)
     _func.__undo_def__ = func.__undo_def__
     return _func
 
 
-def undoablemethod(func):
+def undoablemethod(func: _F) -> _F:
     """A decorator indicating undoable methods."""
-    func = cast(undoable_function, func)
+    if not callable(func):
+        raise TypeError("@undoablemethod must be called on a function.")
     func.__undo_def__ = None
     return func
 
 
-def undo_def(func_fw: Callable):
+def undo_def(func_fw: _F) -> Callable[[Callable], _F]:
+    """Mark a function as the undo function of a already defined function."""
     if not _is_undoable(func_fw):
         raise TypeError(f"{func_fw} is not marked as a undoable method.")
 
@@ -50,6 +43,8 @@ def undo_def(func_fw: Callable):
 
 
 class UndoableABCMeta(ABCMeta):
+    """An ABC metaclass that adds a support for undo check."""
+
     _mgr: UndoManager
     __abstract_undoables__: frozenset[str]
 
