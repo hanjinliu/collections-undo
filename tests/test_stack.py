@@ -92,3 +92,21 @@ def test_size():
     f(0, 0, 0)
     assert mgr.stack_size == 9
     assert mgr.stack_lengths == (3, 0)
+
+def test_repr():
+    mgr = UndoManager()
+
+    @mgr.undoable
+    def a():
+        return 0
+
+    @a.undo_def
+    def a():
+        return -1
+
+    a()
+    repr(mgr)
+    [a() for _ in range(20)]
+    repr(mgr)
+    [mgr.undo() for _ in range(12)]
+    repr(mgr)

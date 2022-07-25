@@ -73,11 +73,11 @@ class ReversibleFunction:
         return out
 
     def _call_raw(self, *args: _P.args, **kwargs: _P.kwargs) -> _R:
-        with self._mgr.blocked():
+        with self._mgr.blocked(), self._mgr.catch_error():
             return self._func_fw(*args, **kwargs)
 
     def _revert(self, *args: _P.args, **kwargs: _P.kwargs) -> _RR:
-        with self._mgr.blocked():
+        with self._mgr.blocked(), self._mgr.catch_error():
             return self._func_rv(*args, **kwargs)
 
     __call__ = _call_with_callback

@@ -1,10 +1,13 @@
 from __future__ import annotations
 from contextlib import contextmanager
+from enum import Enum
 from typing import (
     Any,
     Callable,
     Iterable,
+    Iterator,
     Literal,
+    MutableSequence,
     NamedTuple,
     TYPE_CHECKING,
     TypeVar,
@@ -107,6 +110,62 @@ class Command:
         return cls(fn_merged, (arguments,), {}, size=total_size)
 
 
+class CallbackList(MutableSequence[_F]):
+    """
+    A list of callbacks of UndoManager updates.
+
+    Callbacks are useful for such as logging.
+    """
+
+    def __init__(self) -> None:
+        self._list = []
+
+    def insert(self, index: int, callback: _F, /):
+        self._check_callable(callback)
+        self._list.insert(index, callback)
+
+    def __repr__(self) -> str:
+        return f"{type(self).__name__}({self._list!r})"
+
+    def __len__(self) -> int:
+        return len(self._list)
+
+    def __iter__(self) -> Iterator[_F]:
+        return iter(self._list)
+
+    def __getitem__(self, key):
+        return self._list[key]
+
+    def __setitem__(self, key, callback):
+        self._check_callable(callback)
+        self._list[key] = callback
+
+    def __delitem__(self, key):
+        del self._list[key]
+
+    def evoke(self, *args, **kwargs) -> None:
+        """Evoce all callbacks."""
+        for callback in self._list:
+            callback(*args, **kwargs)
+        return None
+
+    @staticmethod
+    def _check_callable(obj):
+        if not callable(obj):
+            raise TypeError("Can only insert callable object to the callback list.")
+
+
+class CallType(Enum):
+    call = "call"
+    undo = "undo"
+    redo = "redo"
+
+    def __eq__(self, other):
+        if isinstance(other, str):
+            return self.value == other
+        return super().__eq__(other)
+
+
 class LengthPair(NamedTuple):
     """Pair of stack size."""
 
@@ -136,12 +195,17 @@ class UndoManager:
         self._stack_undo_size = 0.0
         self._stack_redo_size = 0.0
         self._is_blocked = False
+        self._called_callbacks: CallbackList[
+            Callable[[Command, CallType], Any]
+        ] = CallbackList()
+        self._errored_callbacks: CallbackList[
+            Callable[[Command, Exception], Any]
+        ] = CallbackList()
 
     def __repr__(self) -> str:
         cls_name = type(self).__name__
-
-        s_undo = ",\n    ".join(repr(cmd) for cmd in self._stack_undo)
-        s_redo = ",\n    ".join(repr(cmd) for cmd in self._stack_redo)
+        s_undo = _join_stack(self._stack_undo)
+        s_redo = _join_stack(self._stack_redo)
         return (
             f"{cls_name}(\n  undo=[\n    {s_undo}\n  ],\n  redo=[\n    {s_redo}\n  ]\n)"
         )
@@ -160,6 +224,16 @@ class UndoManager:
         """True if manager is blocked."""
         return self._is_blocked
 
+    @property
+    def called(self) -> CallbackList[Callable[[Command, CallType], Any]]:
+        """Callback list for called events."""
+        return self._called_callbacks
+
+    @property
+    def errored(self) -> CallbackList[Callable[[Command, Exception], Any]]:
+        """Callback list for errored events."""
+        return self._errored_callbacks
+
     def undo(self) -> Any:
         """Undo last command and update undo/redo stacks."""
         if len(self._stack_undo) == 0:
@@ -171,6 +245,7 @@ class UndoManager:
         # update size
         self._stack_undo_size -= cmd.size
         self._stack_redo_size += cmd.size
+        self.called.evoke(cmd, CallType.undo)
         return out
 
     def redo(self) -> Any:
@@ -184,6 +259,7 @@ class UndoManager:
         # update size
         self._stack_undo_size += cmd.size
         self._stack_redo_size -= cmd.size
+        self.called.evoke(cmd, CallType.redo)
         return out
 
     # def run_all(self) -> Any:
@@ -221,6 +297,7 @@ class UndoManager:
 
         self._stack_undo.append(cmd)
         self._stack_redo.clear()
+        self.called.evoke(cmd, CallType.call)
 
         # update size
         self._stack_undo_size += cmd.size
@@ -352,3 +429,19 @@ class UndoManager:
         finally:
             self._is_blocked = blocked
         return None
+
+    @contextmanager
+    def catch_error(self):
+        try:
+            yield None
+        except Exception as e:
+            self.errored.evoke(e)
+            raise e
+
+
+def _join_stack(stack: list, max: int = 10):
+    if len(stack) > max:
+        s = ",\n    ".join(repr(cmd) for cmd in stack[-10:])
+        return ",\n    ".join(["...", s])
+    else:
+        return ",\n    ".join(repr(cmd) for cmd in stack)
