@@ -76,10 +76,12 @@ b = B()  # OK
 
 #### Builtin undoable objects
 
-- Ready-for-use classes
-  - `UndoableList`
-  - `UndoableDict`
-  - `UndoableSet`
+These mutable classes have `undo` and `redo` method to handle operations that mutate the object.
+
+- Ready-to-use classes
+  - `UndoableList` ... `insert`, `__setitem__`, `extend` etc. are undoable.
+  - `UndoableDict` ... `__setitem__`, `update` etc. are undoable.
+  - `UndoableSet` ... `add`, `discard` etc. are undoable.
 
 - Abstract classes
   - `AbstractUndoableList`
