@@ -2,10 +2,14 @@ from __future__ import annotations
 from abc import ABCMeta
 from functools import wraps
 from typing import Any, Callable, TypeVar
+
 from ._stack import UndoManager
 from ._reversible import ReversibleFunction
 
 _F = TypeVar("_F", bound=Callable)
+
+
+__all__ = ["undoablemethod", "undo_def", "UndoableABC"]
 
 
 def _is_undoable(func) -> bool:
@@ -18,7 +22,7 @@ def _copy_undoable(func: _F) -> _F:
         return func(*args, **kwargs)
 
     _func.__undo_def__ = func.__undo_def__
-    return _func
+    return _func  # type: ignore
 
 
 def undoablemethod(func: _F) -> _F:
@@ -34,7 +38,7 @@ def undo_def(func_fw: _F) -> Callable[[Callable], _F]:
     if not _is_undoable(func_fw):
         raise TypeError(f"{func_fw} is not marked as a undoable method.")
 
-    def _undo_def(func_rv):
+    def _undo_def(func_rv: Callable):
         _func = _copy_undoable(func_fw)
         _func.__undo_def__ = func_rv
         return _func
@@ -48,7 +52,7 @@ class UndoableABCMeta(ABCMeta):
     _mgr: UndoManager
     __abstract_undoables__: frozenset[str]
 
-    def __new__(mcls, name, bases, namespace: dict[str, Any], /, **kwargs):
+    def __new__(cls, name, bases, namespace: dict[str, Any], /, **kwargs):
 
         mgr = UndoManager()
         _undoables_ns: dict[str, Any] = {}
@@ -71,14 +75,31 @@ class UndoableABCMeta(ABCMeta):
                     _undo_undefined.discard(name)
 
         namespace.update(_undoables_ns)
-        cls = ABCMeta.__new__(mcls, name, bases, namespace, **kwargs)
-        cls._mgr = mgr
-        cls.__abstract_undoables__ = frozenset(_undo_undefined)
+        newcls = ABCMeta.__new__(cls, name, bases, namespace, **kwargs)
+        newcls._mgr = mgr
+        newcls.__abstract_undoables__ = frozenset(_undo_undefined)
 
-        return cls
+        return newcls
 
 
 class UndoableABC(metaclass=UndoableABCMeta):
+    """
+    The base class for undoables.
+
+    Using this base class in combination with ``@undoablemethod`` and ``@undo_def``
+    decorators, you can define well defined undoable methods.
+
+    Examples
+    --------
+    >>> class A(UndoableABC):
+    >>>     @undoablemethod
+    >>>     def f(self, x):
+    >>>         # do something
+    >>>     @undo_def(f)
+    >>>     def f(self, x):
+    >>>         # undo something
+    """
+
     _mgr: UndoManager
 
     def __new__(cls, *args, **kwargs):
@@ -91,9 +112,11 @@ class UndoableABC(metaclass=UndoableABCMeta):
         return self
 
     def undo(self):
+        """Undo last operation."""
         return self._mgr.undo()
 
     def redo(self):
+        """Redo last undo operation."""
         return self._mgr.redo()
 
     @property

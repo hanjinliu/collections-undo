@@ -35,6 +35,8 @@ class ReversibleFunction:
         *,
         mgr: UndoManager | None = None,
     ):
+        if mgr is None:
+            raise ValueError("UndoManager must be specified.")
         self._func_fw = func
         if inverse_func is None:
             inverse_func = Undefined(name=getattr(func, "__name__", str(func)))
