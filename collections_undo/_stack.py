@@ -431,7 +431,8 @@ class UndoManager:
         return None
 
     @contextmanager
-    def catch_error(self):
+    def catch_errors(self):
+        """Catch all the errors in this context and evoke callbacks."""
         try:
             yield None
         except Exception as e:
@@ -440,8 +441,9 @@ class UndoManager:
 
 
 def _join_stack(stack: list, max: int = 10):
+    _splitter = ",\n    "
     if len(stack) > max:
-        s = ",\n    ".join(repr(cmd) for cmd in stack[-10:])
-        return ",\n    ".join(["...", s])
+        s = _splitter.join(repr(cmd) for cmd in stack[-max:])
+        return _splitter.join(["...", s])
     else:
-        return ",\n    ".join(repr(cmd) for cmd in stack)
+        return _splitter.join(repr(cmd) for cmd in stack)
