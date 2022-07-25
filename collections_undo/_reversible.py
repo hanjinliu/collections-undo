@@ -15,38 +15,56 @@ class NotReversibleError(RuntimeError):
     """Raised when reversive operation is not defined."""
 
 
+class Undefined:
+    """Used when inverse function is not defined."""
+
+    def __init__(self, name: str):
+        self.__name__ = name
+
+    def __call__(self, *args: Any, **kwargs: Any) -> Any:
+        raise NotReversibleError(f"Function {self.__name__} is not reversible.")
+
+
 class ReversibleFunction:
+    """Reversible function for undoable operations."""
+
     def __init__(
         self,
         func: Callable[_P, _R],
-        mgr: UndoManager,
         inverse_func: Callable[_P, _RR] | None = None,
+        *,
+        mgr: UndoManager | None = None,
     ):
         self._func_fw = func
+        if inverse_func is None:
+            inverse_func = Undefined(name=getattr(func, "__name__", str(func)))
         self._func_rv = inverse_func
         self._mgr = mgr
         wraps(func)(self)
         self._instances: dict[int, Self] = {}
 
     def __hash__(self) -> int:
+        """ReversibleFunction is immutable in public level so use id for hashing."""
         return id(self)
 
     def __newlike__(
         self,
         func: Callable[_P, _R],
-        mgr: UndoManager,
         inverse_func: Callable[_P, _RR] | None = None,
+        mgr: UndoManager | None = None,
     ) -> Self:
-        return type(self)(func, mgr, inverse_func)
+        """Constructor."""
+        return type(self)(func=func, mgr=mgr, inverse_func=inverse_func)
 
     def __repr__(self) -> str:
         return f"{type(self).__name__}<{self.__name__}>"
 
     def undo_def(self, undo: Callable[_P, _RR]) -> Self:
+        """Define inverse function and return a new object."""
         return self.__newlike__(
             func=self._func_fw,
-            mgr=self._mgr,
             inverse_func=undo,
+            mgr=self._mgr,
         )
 
     def _call_with_callback(self, *args: _P.args, **kwargs: _P.kwargs) -> _R:
@@ -59,8 +77,6 @@ class ReversibleFunction:
             return self._func_fw(*args, **kwargs)
 
     def _revert(self, *args: _P.args, **kwargs: _P.kwargs) -> _RR:
-        if self._func_rv is None:
-            raise NotReversibleError(f"{self!r} is not reversible.")
         with self._mgr.blocked():
             return self._func_rv(*args, **kwargs)
 
@@ -109,12 +125,12 @@ class ReversibleFunction:
                 out = _rv(*args, **kwargs)
             return out
 
-        return cls(merged, _mgr, _func_rv)
+        return cls(merged, _func_rv, mgr=_mgr)
 
     def inverted(self) -> Self:
         """Create a command with swapped forward and reverse functions."""
         return self.__newlike__(
             func=self._func_rv,
-            mgr=self._mgr,
             inverse_func=self._func_fw,
+            mgr=self._mgr,
         )

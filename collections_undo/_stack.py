@@ -30,20 +30,6 @@ def _fmt_arg(v: Any) -> str:
     return v_repr
 
 
-def _deprecated_function(func, name: str):
-    @wraps(func)
-    def _wrapper(*args, **kwargs):
-        import warnings
-
-        warnings.warn(
-            f"{name} is deprecated, use {func.__name__} instead",
-            DeprecationWarning,
-        )
-        return func(*args, **kwargs)
-
-    return _wrapper
-
-
 @dataclass(repr=False)
 class Command:
     """
@@ -129,6 +115,7 @@ class LengthPair(NamedTuple):
 
 
 def always_zero(*args, **kwargs) -> float:
+    """Default command size counter."""
     return 0.0
 
 
@@ -170,6 +157,7 @@ class UndoManager:
 
     @property
     def is_blocked(self) -> bool:
+        """True if manager is blocked."""
         return self._is_blocked
 
     def undo(self) -> Any:
@@ -227,6 +215,7 @@ class UndoManager:
         return self._stack_undo_size + self._stack_redo_size
 
     def append(self, cmd: Command) -> None:
+        """Append new command to the undo stack."""
         if self.is_blocked:
             return None
 
@@ -286,8 +275,6 @@ class UndoManager:
 
         return _wrapper if f is None else _wrapper(f)
 
-    command = _deprecated_function(undoable, "undoable")
-
     def property(
         self,
         fget: Callable[[Any], Any] | None = None,
@@ -299,20 +286,20 @@ class UndoManager:
         return UndoableProperty(fget, fset, fdel, doc=doc, mgr=self)
 
     @overload
-    def interface(self, f: Callable, name: str | None = None) -> UndoableInterface:
+    def interface(self, func: Callable, name: str | None = None) -> UndoableInterface:
         ...
 
     @overload
     def interface(
         self,
-        f: Literal[None],
+        func: Literal[None],
         name: str | None = None,
     ) -> Callable[[Callable], UndoableInterface]:
         ...
 
     def interface(
         self,
-        f: Callable | None = None,
+        func: Callable | None = None,
         name: str | None = None,
     ) -> UndoableInterface:
         """Decorator for undoable setter function construction."""
@@ -323,10 +310,14 @@ class UndoManager:
                 itf.__name__ = name
             return itf
 
-        return _wrapper if f is None else _wrapper(f)
+        return _wrapper if func is None else _wrapper(func)
 
     def undef(self, undef: _F) -> _F:
-        """Mark an function as an undo-undefined function."""
+        """
+        Mark an function as an undo-undefined function.
+
+        When marked function is called, undo/redo stack get cleared.
+        """
 
         @wraps(undef)
         def _undef(*args, **kwargs):
@@ -353,6 +344,7 @@ class UndoManager:
 
     @contextmanager
     def blocked(self):
+        """Block new command from being appended to the stack."""
         blocked = self._is_blocked
         self._is_blocked = True
         try:

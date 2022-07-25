@@ -102,7 +102,7 @@ class UndoableInterface:
             args, kwargs = old
             return self.freceive(*args, **kwargs)
 
-        fn = ReversibleFunction(fw, self._mgr, rv)
+        fn = ReversibleFunction(fw, rv, mgr=self._mgr)
         wraps(self)(fn)
         return fn
 
