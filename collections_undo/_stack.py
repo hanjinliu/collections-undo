@@ -109,6 +109,25 @@ class Command:
             fn_merged.__name__ = name
         return cls(fn_merged, (arguments,), {}, size=total_size)
 
+    def to_code(self, ns: str | None = None) -> str:
+        """
+        Convert command to code.
+
+        Parameters
+        ----------
+        ns : str, optional
+            The namespace of the command. If None, the command will be converted
+            to a simple expression.
+
+        Returns
+        -------
+        str
+            The code of the command.
+        """
+        from ._codegen import generate
+
+        return generate(self, ns)
+
 
 class CallbackList(MutableSequence[_F]):
     """
@@ -206,9 +225,15 @@ class UndoManager:
         cls_name = type(self).__name__
         s_undo = _join_stack(self._stack_undo)
         s_redo = _join_stack(self._stack_redo)
-        return (
-            f"{cls_name}(\n  undo=[\n    {s_undo}\n  ],\n  redo=[\n    {s_redo}\n  ]\n)"
-        )
+        if s_undo:
+            s_undo = f"[\n    {s_undo}\n  ]"
+        else:
+            s_undo = "[]"
+        if s_redo:
+            s_redo = f"[\n    {s_redo}\n  ]"
+        else:
+            s_redo = "[]"
+        return f"{cls_name}(\n  undo={s_undo},\n  redo={s_redo}\n)"
 
     def __get__(self, obj, objtype=None) -> UndoManager:
         if obj is None:
