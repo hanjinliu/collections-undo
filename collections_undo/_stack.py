@@ -197,6 +197,27 @@ def always_zero(*args, **kwargs) -> float:
     return 0.0
 
 
+class ManagerState:
+    def __init__(
+        self,
+        measure: Callable[..., float],
+        maxsize: float,
+    ) -> None:
+        self.measure = measure
+        self.maxsize = maxsize
+        self.is_blocked = False
+        self.stack_undo: list[Command] = []
+        self.stack_redo: list[Command] = []
+        self.stack_undo_size = 0.0
+        self.stack_redo_size = 0.0
+        self.called_callbacks: CallbackList[
+            Callable[[Command, CallType], Any]
+        ] = CallbackList()
+        self.errored_callbacks: CallbackList[
+            Callable[[Command, Exception], Any]
+        ] = CallbackList()
+
+
 class UndoManager:
     def __init__(
         self,
@@ -204,27 +225,15 @@ class UndoManager:
         measure: Callable[..., float] = always_zero,
         maxsize: float | Literal["inf"] = "inf",
     ):
-        self._stack_undo: list[Command] = []
-        self._stack_redo: list[Command] = []
         self._instances: dict[int, Self] = {}
         if not callable(measure):
             raise TypeError("measure must be callable")
-        self._measure = measure
-        self._maxsize = float(maxsize)
-        self._stack_undo_size = 0.0
-        self._stack_redo_size = 0.0
-        self._is_blocked = False
-        self._called_callbacks: CallbackList[
-            Callable[[Command, CallType], Any]
-        ] = CallbackList()
-        self._errored_callbacks: CallbackList[
-            Callable[[Command, Exception], Any]
-        ] = CallbackList()
+        self._state = ManagerState(measure, float(maxsize))
 
     def __repr__(self) -> str:
         cls_name = type(self).__name__
-        s_undo = _join_stack(self._stack_undo)
-        s_redo = _join_stack(self._stack_redo)
+        s_undo = _join_stack(self._state.stack_undo)
+        s_redo = _join_stack(self._state.stack_redo)
         if s_undo:
             s_undo = f"[\n    {s_undo}\n  ]"
         else:
@@ -247,103 +256,120 @@ class UndoManager:
     @property
     def is_blocked(self) -> bool:
         """True if manager is blocked."""
-        return self._is_blocked
+        return self._state.is_blocked
 
     @property
     def called(self) -> CallbackList[Callable[[Command, CallType], Any]]:
         """Callback list for called events."""
-        return self._called_callbacks
+        return self._state.called_callbacks
 
     @property
     def errored(self) -> CallbackList[Callable[[Command, Exception], Any]]:
         """Callback list for errored events."""
-        return self._errored_callbacks
+        return self._state.errored_callbacks
 
     def undo(self) -> Any:
         """Undo last command and update undo/redo stacks."""
-        if len(self._stack_undo) == 0:
+        if len(self._state.stack_undo) == 0:
             return empty
-        cmd = self._stack_undo.pop()
+        cmd = self._state.stack_undo.pop()
         out = cmd._revert()
-        self._stack_redo.append(cmd)
+        self._state.stack_redo.append(cmd)
 
         # update size
-        self._stack_undo_size -= cmd.size
-        self._stack_redo_size += cmd.size
+        self._state.stack_undo_size -= cmd.size
+        self._state.stack_redo_size += cmd.size
         self.called.evoke(cmd, CallType.undo)
         return out
 
     def redo(self) -> Any:
         """Redo last command and update undo/redo stacks."""
-        if len(self._stack_redo) == 0:
+        if len(self._state.stack_redo) == 0:
             return empty
-        cmd = self._stack_redo.pop()
+        cmd = self._state.stack_redo.pop()
         out = cmd._call_raw()
-        self._stack_undo.append(cmd)
+        self._state.stack_undo.append(cmd)
 
         # update size
-        self._stack_undo_size += cmd.size
-        self._stack_redo_size -= cmd.size
+        self._state.stack_undo_size += cmd.size
+        self._state.stack_redo_size -= cmd.size
         self.called.evoke(cmd, CallType.redo)
         return out
 
+    def link(self, other: UndoManager) -> None:
+        if self.empty:
+            self._state = other._state
+        elif other.empty:
+            other.link(self)
+        else:
+            raise ValueError("Either UndoManager must be empty.")
+        return None
+
     # def run_all(self) -> Any:
     #     """Run all the command."""
-    #     for cmd in self._stack_undo:
+    #     for cmd in self._state.stack_undo:
     #         out = cmd.func._call_raw(*cmd.args, **cmd.kwargs)
-    #     self._stack_redo = self._stack_undo.copy()
-    #     self._stack_redo.reverse()
+    #     self._state.stack_redo = self._state.stack_undo.copy()
+    #     self._state.stack_redo.reverse()
     #     return out
 
     @property
     def stack_undo(self) -> list[Command]:
         """List of undo stack."""
-        return list(self._stack_undo)
+        return list(self._state.stack_undo)
 
     @property
     def stack_redo(self) -> list[Command]:
         """List of redo stack."""
-        return list(self._stack_redo)
+        return list(self._state.stack_redo)
 
     @property
     def stack_lengths(self) -> LengthPair:
         """Return length of undo and redo stack"""
-        return LengthPair(undo=len(self._stack_undo), redo=len(self._stack_redo))
+        return LengthPair(
+            undo=len(self._state.stack_undo),
+            redo=len(self._state.stack_redo),
+        )
 
     @property
     def stack_size(self) -> float:
         """Return size of undo and redo stack"""
-        return self._stack_undo_size + self._stack_redo_size
+        return self._state.stack_undo_size + self._state.stack_redo_size
+
+    @property
+    def empty(self) -> bool:
+        """True if stack is empty."""
+        return len(self._state.stack_undo) == 0 and len(self._state.stack_redo) == 0
 
     def append(self, cmd: Command) -> None:
         """Append new command to the undo stack."""
         if self.is_blocked:
             return None
 
-        self._stack_undo.append(cmd)
-        self._stack_redo.clear()
+        self._state.stack_undo.append(cmd)
+        self._state.stack_redo.clear()
         self.called.evoke(cmd, CallType.call)
 
         # update size
-        self._stack_undo_size += cmd.size
-        self._stack_redo_size = 0.0
+        self._state.stack_undo_size += cmd.size
+        self._state.stack_redo_size = 0.0
 
         # pop items until size is less than maxsize
-        while self._stack_undo_size > self._maxsize:
-            cmd = self._stack_undo.pop(0)
-            self._stack_undo_size -= cmd.size
+        while self._state.stack_undo_size > self._state.maxsize:
+            cmd = self._state.stack_undo.pop(0)
+            self._state.stack_undo_size -= cmd.size
         return None
 
     def _append_command(self, cmd, *args, **kwargs):
         cmd = Command(func=cmd, args=args, kwargs=kwargs)
-        cmd.size = self._measure(*args, **kwargs)
+        cmd.size = self._state.measure(*args, **kwargs)
         return self.append(cmd)
 
     def clear(self) -> None:
         """Clear the stack."""
-        self._stack_undo.clear()
-        self._stack_redo.clear()
-        self._stack_undo_size = self._stack_redo_size = 0.0
+        self._state.stack_undo.clear()
+        self._state.stack_redo.clear()
+        self._state.stack_undo_size = self._state.stack_redo_size = 0.0
         return None
 
     @overload
@@ -430,29 +456,29 @@ class UndoManager:
 
     def merge_commands(self, start: int, stop: int, name: str | None = None) -> None:
         """Merge a command set into the undo stack."""
-        merged = Command.merge(self._stack_undo[start:stop], name=name)
-        del self._stack_undo[start:stop]
-        self._stack_undo.insert(start, merged)
+        merged = Command.merge(self._state.stack_undo[start:stop], name=name)
+        del self._state.stack_undo[start:stop]
+        self._state.stack_undo.insert(start, merged)
         return None
 
     @contextmanager
     def merging(self, name: str | None = None) -> None:
         """Merge all the commands into a single command in this context."""
-        len_before = len(self._stack_undo)
+        len_before = len(self._state.stack_undo)
         yield None
-        len_after = len(self._stack_undo)
+        len_after = len(self._state.stack_undo)
         self.merge_commands(len_before, len_after, name=name)
         return None
 
     @contextmanager
     def blocked(self):
         """Block new command from being appended to the stack."""
-        blocked = self._is_blocked
-        self._is_blocked = True
+        blocked = self._state.is_blocked
+        self._state.is_blocked = True
         try:
             yield None
         finally:
-            self._is_blocked = blocked
+            self._state.is_blocked = blocked
         return None
 
     @contextmanager

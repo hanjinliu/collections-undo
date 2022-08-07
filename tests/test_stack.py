@@ -110,3 +110,77 @@ def test_repr():
     repr(mgr)
     [mgr.undo() for _ in range(12)]
     repr(mgr)
+
+def test_pre_link():
+    mgr0 = UndoManager()
+    mgr1 = UndoManager()
+
+    mgr0.link(mgr1)
+
+
+    @mgr0.undoable
+    def a():
+        return 0
+
+    @a.undo_def
+    def a():
+        return -1
+
+    a()
+    assert mgr0.stack_lengths == (1, 0)
+    assert mgr1.stack_lengths == (1, 0)
+
+    mgr0.undo()
+    assert mgr0.stack_lengths == (0, 1)
+    assert mgr1.stack_lengths == (0, 1)
+
+
+def test_post_link():
+    mgr0 = UndoManager()
+    mgr1 = UndoManager()
+
+    @mgr0.undoable
+    def a():
+        return 0
+
+    @a.undo_def
+    def a():
+        return -1
+
+    a()
+
+    mgr0.link(mgr1)
+
+    assert mgr0.stack_lengths == (1, 0)
+    assert mgr1.stack_lengths == (1, 0)
+
+    mgr0.undo()
+    assert mgr0.stack_lengths == (0, 1)
+    assert mgr1.stack_lengths == (0, 1)
+
+def test_link_blocked():
+    mgr0 = UndoManager()
+    mgr1 = UndoManager()
+
+    @mgr0.undoable
+    def a():
+        return 0
+
+    @a.undo_def
+    def a():
+        return -1
+
+    mgr0.link(mgr1)
+
+    with mgr0.blocked():
+        a()
+
+    assert mgr0.stack_lengths == (0, 0)
+    assert mgr1.stack_lengths == (0, 0)
+
+
+    with mgr1.blocked():
+        a()
+
+    assert mgr0.stack_lengths == (0, 0)
+    assert mgr1.stack_lengths == (0, 0)
