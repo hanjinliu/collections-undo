@@ -297,6 +297,8 @@ class UndoManager:
         return out
 
     def link(self, other: UndoManager) -> None:
+        if not isinstance(other, UndoManager):
+            raise TypeError(f"Cannot link {other!r}.")
         if self.empty:
             self._state = other._state
         elif other.empty:
