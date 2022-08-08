@@ -60,11 +60,7 @@ class Command:
 
     def __repr__(self) -> str:
         _cls = type(self).__name__
-        _args = list(map(_fmt_arg, self.args))
-        _args += list(f"{k}={_fmt_arg(v)}" for k, v in self.kwargs.items())
-        _args = ", ".join(_args)
-        _fn = self.func.__name__
-        return f"{_cls}<{_fn}({_args})>"
+        return f"{_cls}<{self.func.format_forward_call(*self.args, *self.kwargs)}>"
 
     def _call_with_callback(self):
         return self.func._call_with_callback(*self.args, **self.kwargs)
@@ -249,8 +245,7 @@ class UndoManager:
             return self
         _id = id(obj)
         if (stack := self._instances.get(_id, None)) is None:
-            stack = type(self)()
-            self._instances[_id] = stack
+            self._instances[_id] = stack = type(self)()
         return stack
 
     @property

@@ -9,6 +9,7 @@ if TYPE_CHECKING:
     _P = ParamSpec("_P")
     _R = TypeVar("_R")
     _RR = TypeVar("_RR")
+    _F = TypeVar("_F", bound=Callable)
 
 
 class NotReversibleError(RuntimeError):
@@ -23,6 +24,13 @@ class Undefined:
 
     def __call__(self, *args: Any, **kwargs: Any) -> Any:
         raise NotReversibleError(f"Function {self.__name__} is not reversible.")
+
+
+def _fmt_arg(v: Any) -> str:
+    v_repr = repr(v)
+    if len(v_repr) > 18:
+        v_repr = "#" + type(v).__name__ + "#"
+    return v_repr
 
 
 class ReversibleFunction:
@@ -42,6 +50,7 @@ class ReversibleFunction:
             inverse_func = Undefined(name=getattr(func, "__name__", str(func)))
         self._func_rv = inverse_func
         self._mgr = mgr
+        self._formatter = self._default_formatter
         wraps(func)(self)
         self._instances: dict[int, Self] = {}
 
@@ -69,6 +78,18 @@ class ReversibleFunction:
             mgr=self._mgr,
         )
 
+    def set_formatter(self, formatter: _F) -> _F:
+        """Set a custom formatter function."""
+        if not callable(formatter):
+            raise TypeError("Can only set a callable as a formatter.")
+        self._formatter = formatter
+
+    def format_forward_call(self, *args, **kwargs):
+        return self._formatter(self._func_fw, *args, **kwargs)
+
+    def format_reverse_call(self, *args, **kwargs):
+        return self._formatter(self._func_rv, *args, **kwargs)
+
     def _call_with_callback(self, *args: _P.args, **kwargs: _P.kwargs) -> _R:
         out = self._call_raw(*args, **kwargs)
         self._mgr._append_command(self, *args, *kwargs)
@@ -94,12 +115,11 @@ class ReversibleFunction:
                 inv_func = None
             else:
                 inv_func = self._func_rv.__get__(obj, objtype)
-            out = type(self)(
+            self._instances[_id] = out = type(self)(
                 func=self._func_fw.__get__(obj, objtype),
                 mgr=self._mgr.__get__(obj, objtype),
                 inverse_func=inv_func,
             )
-            self._instances[_id] = out
         return out
 
     @classmethod
@@ -136,3 +156,11 @@ class ReversibleFunction:
             inverse_func=self._func_fw,
             mgr=self._mgr,
         )
+
+    @staticmethod
+    def _default_formatter(func: Callable, *args, **kwargs) -> str:
+        _args = list(map(_fmt_arg, args))
+        _args += list(f"{k}={_fmt_arg(v)}" for k, v in kwargs.items())
+        _args = ", ".join(_args)
+        _fn = getattr(func, "__name__", str(func))
+        return f"{_fn}({_args})"

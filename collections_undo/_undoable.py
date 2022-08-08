@@ -10,7 +10,8 @@ if TYPE_CHECKING:
 
     _P = ParamSpec("_P")
     _R = TypeVar("_R")
-    _Args = TypeVar("_Args", bound=tuple[tuple, dict[str, Any]])
+    ArgsType = tuple[tuple, dict[str, Any]]
+    _Args = TypeVar("_Args", bound=ArgsType)
 
 
 def _dummy_func(*args, **kwargs) -> None:
@@ -80,31 +81,38 @@ class UndoableInterface:
             return self
         _id = id(obj)
         if (out := self._instances.get(_id, None)) is None:
-            out = UndoableInterface(
+            self._instances[_id] = out = UndoableInterface(
                 freceive=self.freceive.__get__(obj, objtype),
                 fserve=self.fserve.__get__(obj, objtype),
                 mgr=self._mgr.__get__(obj, objtype),
             )
-            self._instances[_id] = out
         return out
 
     def __repr__(self) -> str:
         return f"{type(self).__name__}<{self.freceive!r}>"
 
     def _create_function(self) -> ReversibleFunction:
-        def fw(new, old):
+        def fw(new: ArgsType, old: ArgsType):
             args, kwargs = new
             return self.freceive(*args, **kwargs)
 
-        def rv(new, old):
+        fw.__name__ = self.__name__
+
+        def rv(new: ArgsType, old: ArgsType):
             if old is None:
                 return empty
             args, kwargs = old
             return self.freceive(*args, **kwargs)
 
         fn = ReversibleFunction(fw, rv, mgr=self._mgr)
+        fn.set_formatter(self._formatter)
         wraps(self)(fn)
         return fn
+
+    @staticmethod
+    def _formatter(func, new: ArgsType, old: ArgsType):
+        args, kwargs = new
+        return ReversibleFunction._default_formatter(func, *args, **kwargs)
 
 
 class UndoableProperty(property):
