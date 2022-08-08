@@ -83,6 +83,7 @@ class ReversibleFunction:
         if not callable(formatter):
             raise TypeError("Can only set a callable as a formatter.")
         self._formatter = formatter
+        return formatter
 
     def format_forward_call(self, *args, **kwargs):
         return self._formatter(self._func_fw, *args, **kwargs)
@@ -120,6 +121,8 @@ class ReversibleFunction:
                 mgr=self._mgr.__get__(obj, objtype),
                 inverse_func=inv_func,
             )
+            out.__name__ = self.__name__
+            out.set_formatter(self._formatter)
         return out
 
     @classmethod

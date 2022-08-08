@@ -41,8 +41,8 @@ class UndoableInterface:
             wraps(freceive)(self)
         if fserve is None:
             fserve = _dummy_func
-        self.freceive = freceive
-        self.fserve = fserve
+        self._freceive = freceive
+        self._fserve = fserve
         self._mgr = mgr
         self._func = None
         self._instances: dict[int, UndoableInterface] = {}
@@ -51,14 +51,14 @@ class UndoableInterface:
         """Set the server function."""
         return UndoableInterface(
             fserve=fserve,
-            freceive=self.freceive,
+            freceive=self._freceive,
             mgr=self._mgr,
         )
 
     def receiver(self, freceive: Callable[_P, _R]) -> Callable[_P, _R]:
         """Set the receiver function."""
         return UndoableInterface(
-            fserve=self.fserve,
+            fserve=self._fserve,
             freceive=freceive,
             mgr=self._mgr,
         )
@@ -71,8 +71,8 @@ class UndoableInterface:
 
     def __call__(self, *args: _P.args, **kwargs: _P.kwargs) -> _R:
         with self._mgr.blocked():
-            _old_state = self.fserve(*args, **kwargs)
-            out = self.freceive(*args, **kwargs)
+            _old_state = self._fserve(*args, **kwargs)
+            out = self._freceive(*args, **kwargs)
         self._mgr._append_command(self.func, (args, kwargs), _old_state)
         return out
 
@@ -82,19 +82,19 @@ class UndoableInterface:
         _id = id(obj)
         if (out := self._instances.get(_id, None)) is None:
             self._instances[_id] = out = UndoableInterface(
-                freceive=self.freceive.__get__(obj, objtype),
-                fserve=self.fserve.__get__(obj, objtype),
+                freceive=self._freceive.__get__(obj, objtype),
+                fserve=self._fserve.__get__(obj, objtype),
                 mgr=self._mgr.__get__(obj, objtype),
             )
         return out
 
     def __repr__(self) -> str:
-        return f"{type(self).__name__}<{self.freceive!r}>"
+        return f"{type(self).__name__}<{self._freceive!r}>"
 
     def _create_function(self) -> ReversibleFunction:
         def fw(new: ArgsType, old: ArgsType):
             args, kwargs = new
-            return self.freceive(*args, **kwargs)
+            return self._freceive(*args, **kwargs)
 
         fw.__name__ = self.__name__
 
@@ -102,7 +102,7 @@ class UndoableInterface:
             if old is None:
                 return empty
             args, kwargs = old
-            return self.freceive(*args, **kwargs)
+            return self._freceive(*args, **kwargs)
 
         fn = ReversibleFunction(fw, rv, mgr=self._mgr)
         fn.set_formatter(self._formatter)
@@ -161,6 +161,11 @@ class UndoableProperty(property):
             old_val = self.fget(obj)
             fset_reversible.__get__(obj)(val, old_val)
 
+        # update names and the formatter
+        fset_reversible.__name__ = fset.__name__
+        fset_reversible._func_fw.__name__ = fset.__name__
+        fset_reversible.set_formatter(self._setter_formatter)
+
         return UndoableProperty(
             fget=self.fget,
             fset=fset_ext,
@@ -168,6 +173,12 @@ class UndoableProperty(property):
             doc=self.__doc__,
             mgr=self._mgr,
         )
+
+    @staticmethod
+    def _setter_formatter(func, new, old):
+        obj = getattr(func, "__self__", "obj")
+        key = getattr(func, "__name__", str(func))
+        return f"{obj}.{key} = {new!r}"
 
     def deleter(self, fdel: Callable[[Any], None], /) -> UndoableProperty:
         """Define the undoable deleter function."""
@@ -185,6 +196,11 @@ class UndoableProperty(property):
             old_val = self.fget(obj)
             fdel_reversible.__get__(obj)(old_val)
 
+        # update names and the formatter
+        fdel_reversible.__name__ = fdel.__name__
+        fdel_reversible._func_fw.__name__ = fdel.__name__
+        fdel_reversible.set_formatter(self._deleter_formatter)
+
         return UndoableProperty(
             fget=self.fget,
             fset=self.fset,
@@ -192,6 +208,12 @@ class UndoableProperty(property):
             doc=self.__doc__,
             mgr=self._mgr,
         )
+
+    @staticmethod
+    def _deleter_formatter(func, old):
+        obj = getattr(func, "__self__", "obj")
+        key = getattr(func, "__name__", str(func))
+        return f"del {obj}.{key}"
 
     @classmethod
     def from_property(self, prop: property, mgr: UndoManager) -> UndoableProperty:
