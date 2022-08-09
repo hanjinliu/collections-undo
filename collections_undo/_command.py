@@ -1,11 +1,14 @@
 from __future__ import annotations
 from abc import ABC, abstractmethod, abstractproperty
-from typing import Any, Callable, Iterable, Iterator, Union
+from typing import Any, Callable, Iterable, Iterator, Union, TYPE_CHECKING
 from dataclasses import dataclass
 
 from ._reversible import ReversibleFunction
 
 FormatterType = Union[Callable[["Command"], str], str]
+
+if TYPE_CHECKING:
+    from typing_extensions import Self
 
 
 class _CommandBase(ABC):
@@ -64,43 +67,9 @@ class Command(_CommandBase):
     def _revert(self):
         return self.func._revert(*self.args, **self.kwargs)
 
-    # @classmethod
-    # def merge(cls, cmds: Iterable[Command], name: str | None = None) -> Command:
-    #     """
-    #     Merge multiple commands into one.
-
-    #     This method is used to reduce command set stack by merging simple operations.
-    #     For instance, if you defined a undoable "append" method and intend to define
-    #     "extend" method by repeating "append" operation, a lot of "append" command
-    #     will be generated. To avoid this, you can use this method to merge "append".
-
-    #     Parameters
-    #     ----------
-    #     cmds : Iterable[CommandSet]
-    #         List of command sets to merge.
-
-    #     Returns
-    #     -------
-    #     CommandSet
-    #         Merged command set.
-    #     """
-    #     arguments: list[tuple, dict[str, Any]] = []
-    #     funcs: list[ReversibleFunction] = []
-    #     total_size = 0.0
-
-    #     for cmd in cmds:
-    #         funcs.append(cmd.func)
-    #         arguments.append((cmd.args, cmd.kwargs))
-    #         total_size += cmd.size
-
-    #     fn_merged = ReversibleFunction.merge(funcs)
-    #     if name is not None:
-    #         fn_merged.__name__ = name
-    #     return cls(fn_merged, (arguments,), {}, size=total_size)
-
     @classmethod
-    def merge(cls, cmds: Iterable[Command], name: str | None = None) -> CommandGroup:
-        group = CommandGroup(cmds)
+    def merge(cls, cmds: Iterable[Command], formatter=None) -> CommandGroup:
+        group = CommandGroup(cmds, formatter=formatter)
         return group
 
     def to_code(self, ns: str | None = None) -> str:
@@ -159,8 +128,16 @@ class Command(_CommandBase):
 
 
 class CommandGroup(_CommandBase):
-    def __init__(self, commands: Iterable[Command]):
+    def __init__(
+        self,
+        commands: Iterable[Command],
+        formatter: Callable[[Self], str] | None = None,
+    ):
         self._commands = list(commands)
+        if formatter is None:
+            self._formatter = type(self)._format_default
+        else:
+            self._formatter = formatter
 
     @property
     def commands(self) -> list[Command]:
@@ -179,18 +156,30 @@ class CommandGroup(_CommandBase):
         s = ", \n\t".join(repr(cmd) for cmd in self)
         return f"{cls}([{s}\n])"
 
-    def _call_with_callback(self):
+    def _call_with_callback(self) -> Any:
         for cmd in self._commands:
-            cmd._call_with_callback()
+            out = cmd._call_with_callback()
+        return out
 
-    def _call_raw(self):
+    def _call_raw(self) -> Any:
         for cmd in self._commands:
-            cmd._call_raw()
+            out = cmd._call_raw()
+        return out
 
-    def _revert(self):
+    def _revert(self) -> Any:
         for cmd in reversed(self._commands):
-            cmd._revert()
+            out = cmd._revert()
+        return out
 
     @property
-    def size(self):
+    def size(self) -> int:
+        """The total size of the command."""
         return sum(cmd.size for cmd in self._commands)
+
+    def format(self, fmt: Callable | None = None) -> str:
+        if fmt is not None:
+            return fmt(self.commands)
+        return self._formatter(self)
+
+    def _format_default(self) -> str:
+        return "\n".join(cmd.format() for cmd in self)

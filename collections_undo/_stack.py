@@ -351,20 +351,22 @@ class UndoManager:
 
         return _undef
 
-    def merge_commands(self, start: int, stop: int, name: str | None = None) -> None:
+    def merge_commands(
+        self, start: int, stop: int, formatter: Callable | None = None
+    ) -> None:
         """Merge a command set into the undo stack."""
-        merged = Command.merge(self._state.stack_undo[start:stop], name=name)
+        merged = Command.merge(self._state.stack_undo[start:stop], formatter=formatter)
         del self._state.stack_undo[start:stop]
         self._state.stack_undo.insert(start, merged)
         return None
 
     @contextmanager
-    def merging(self, name: str | None = None) -> None:
+    def merging(self, formatter: Callable | None = None) -> None:
         """Merge all the commands into a single command in this context."""
         len_before = len(self._state.stack_undo)
         yield None
         len_after = len(self._state.stack_undo)
-        self.merge_commands(len_before, len_after, name=name)
+        self.merge_commands(len_before, len_after, formatter=formatter)
         return None
 
     @contextmanager

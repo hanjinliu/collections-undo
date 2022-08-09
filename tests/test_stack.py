@@ -184,3 +184,52 @@ def test_link_blocked():
 
     assert mgr0.stack_lengths == (0, 0)
     assert mgr1.stack_lengths == (0, 0)
+
+def test_group():
+    class A:
+        mgr = UndoManager()
+
+        def __init__(self):
+            self.x = self.y = self.z = 0
+            self._hist = []
+
+        @mgr.interface
+        def setx(self, x):
+            self.x = x
+            self._hist.append("x")
+
+        @setx.server
+        def setx(self, x):
+            return (self.x,), {}
+
+        @mgr.interface
+        def sety(self, y):
+            self.y = y
+            self._hist.append("y")
+
+        @sety.server
+        def sety(self, y):
+            return (self.y,), {}
+
+        @mgr.interface
+        def setz(self, z):
+            self.z = z
+            self._hist.append("z")
+
+        @setz.server
+        def setz(self, z):
+            return (self.z,), {}
+
+        def set(self, x, y, z):
+            with self.mgr.merging():
+                self.setx(x)
+                self.sety(y)
+                self.setz(z)
+
+    a = A()
+    a.set(1, 2, 3)
+    assert a.mgr.stack_lengths == (1, 0)
+    assert a._hist[-3:] == ["x", "y", "z"]
+    a.mgr.undo()
+    assert a.mgr.stack_lengths == (0, 1)
+    assert a._hist[-3:] == ["z", "y", "x"]
