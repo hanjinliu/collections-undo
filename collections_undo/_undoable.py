@@ -76,6 +76,9 @@ class UndoableInterface:
         self._mgr._append_command(self.func, (args, kwargs), _old_state)
         return out
 
+    def __set_name__(self, owner: type, name: str) -> None:
+        self.__name__ = name
+
     def __get__(self, obj, objtype=None) -> UndoableInterface:
         if obj is None:
             return self
@@ -105,14 +108,14 @@ class UndoableInterface:
             return self._freceive(*args, **kwargs)
 
         fn = ReversibleFunction(fw, rv, mgr=self._mgr)
-        fn.set_formatter(self._formatter)
+        fn.map_args = self._map_args
         wraps(self)(fn)
         return fn
 
     @staticmethod
-    def _formatter(func, new: ArgsType, old: ArgsType):
-        args, kwargs = new
-        return ReversibleFunction._default_formatter(func, *args, **kwargs)
+    def _map_args(args, kwargs):
+        new, old = args
+        return new
 
 
 class UndoableProperty(property):
@@ -149,22 +152,19 @@ class UndoableProperty(property):
         """Define the undoable setter function."""
 
         @self._mgr.undoable
-        def fset_reversible(obj, val, old_val):
+        def setattr(obj, val, old_val):
             fset(obj, val)
 
-        @fset_reversible.undo_def
-        def fset_reversible(obj, val, old_val):
+        @setattr.undo_def
+        def setattr(obj, val, old_val):
             fset(obj, old_val)
 
         @wraps(fset)
         def fset_ext(obj, val):
             old_val = self.fget(obj)
-            fset_reversible.__get__(obj)(val, old_val)
+            setattr.__get__(obj)(val, old_val)
 
         # update names and the formatter
-        fset_reversible.__name__ = fset.__name__
-        fset_reversible._func_fw.__name__ = fset.__name__
-        fset_reversible.set_formatter(self._setter_formatter)
 
         return UndoableProperty(
             fget=self.fget,
@@ -174,32 +174,23 @@ class UndoableProperty(property):
             mgr=self._mgr,
         )
 
-    @staticmethod
-    def _setter_formatter(func, new, old):
-        obj = getattr(func, "__self__", "obj")
-        key = getattr(func, "__name__", str(func))
-        return f"{obj}.{key} = {new!r}"
-
     def deleter(self, fdel: Callable[[Any], None], /) -> UndoableProperty:
         """Define the undoable deleter function."""
 
         @self._mgr.undoable
-        def fdel_reversible(obj, old_val):
+        def delattr(obj, old_val):
             fdel(obj)
 
-        @fdel_reversible.undo_def
-        def fdel_reversible(obj, old_val):
+        @delattr.undo_def
+        def delattr(obj, old_val):
             self.fset(obj, old_val)
 
         @wraps(fdel)
         def fdel_ext(obj):
             old_val = self.fget(obj)
-            fdel_reversible.__get__(obj)(old_val)
+            delattr.__get__(obj)(old_val)
 
         # update names and the formatter
-        fdel_reversible.__name__ = fdel.__name__
-        fdel_reversible._func_fw.__name__ = fdel.__name__
-        fdel_reversible.set_formatter(self._deleter_formatter)
 
         return UndoableProperty(
             fget=self.fget,
@@ -209,13 +200,10 @@ class UndoableProperty(property):
             mgr=self._mgr,
         )
 
-    @staticmethod
-    def _deleter_formatter(func, old):
-        obj = getattr(func, "__self__", "obj")
-        key = getattr(func, "__name__", str(func))
-        return f"del {obj}.{key}"
-
     @classmethod
     def from_property(self, prop: property, mgr: UndoManager) -> UndoableProperty:
         """Construct a new undoable property from a property object."""
         return UndoableProperty(prop.fget, prop.fset, prop.fdel, prop.__doc__, mgr=mgr)
+
+    def _map_args(self, *args, **kwargs):
+        return args, kwargs

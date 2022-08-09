@@ -2,7 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Callable, Type, TypeVar
 
 if TYPE_CHECKING:
-    from ._stack import Command
+    from ._command import Command
 
 _T = TypeVar("_T", bound=type)
 

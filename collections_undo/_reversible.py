@@ -1,5 +1,5 @@
 from __future__ import annotations
-from functools import wraps
+from functools import wraps, partial
 from typing import Any, Callable, TYPE_CHECKING, Iterable, TypeVar
 
 if TYPE_CHECKING:
@@ -50,7 +50,6 @@ class ReversibleFunction:
             inverse_func = Undefined(name=getattr(func, "__name__", str(func)))
         self._func_rv = inverse_func
         self._mgr = mgr
-        self._formatter = self._default_formatter
         wraps(func)(self)
         self._instances: dict[int, Self] = {}
 
@@ -70,6 +69,9 @@ class ReversibleFunction:
     def __repr__(self) -> str:
         return f"{type(self).__name__}<{self.__name__}>"
 
+    def __set_name__(self, owner: type, name: str) -> None:
+        self.__name__ = name
+
     def undo_def(self, undo: Callable[_P, _RR]) -> Self:
         """Define inverse function and return a new object."""
         return self.__newlike__(
@@ -78,18 +80,11 @@ class ReversibleFunction:
             mgr=self._mgr,
         )
 
-    def set_formatter(self, formatter: _F) -> _F:
-        """Set a custom formatter function."""
-        if not callable(formatter):
-            raise TypeError("Can only set a callable as a formatter.")
-        self._formatter = formatter
-        return formatter
-
     def format_forward_call(self, *args, **kwargs):
-        return self._formatter(self._func_fw, *args, **kwargs)
+        return self._default_formatter(self._func_fw, *args, **kwargs)
 
     def format_reverse_call(self, *args, **kwargs):
-        return self._formatter(self._func_rv, *args, **kwargs)
+        return self._default_formatter(self._func_rv, *args, **kwargs)
 
     def _call_with_callback(self, *args: _P.args, **kwargs: _P.kwargs) -> _R:
         out = self._call_raw(*args, **kwargs)
@@ -122,7 +117,7 @@ class ReversibleFunction:
                 inverse_func=inv_func,
             )
             out.__name__ = self.__name__
-            out.set_formatter(self._formatter)
+            out.map_args = self.map_args
         return out
 
     @classmethod
@@ -160,10 +155,32 @@ class ReversibleFunction:
             mgr=self._mgr,
         )
 
-    @staticmethod
-    def _default_formatter(func: Callable, *args, **kwargs) -> str:
+    def _default_formatter(self, func: Callable, *args, **kwargs) -> str:
+        func, args, kwargs = _unpartial(func, args, kwargs)
+        args, kwargs = self.map_args(args, kwargs)
         _args = list(map(_fmt_arg, args))
         _args += list(f"{k}={_fmt_arg(v)}" for k, v in kwargs.items())
         _args = ", ".join(_args)
         _fn = getattr(func, "__name__", str(func))
         return f"{_fn}({_args})"
+
+    def map_args(self, args, kwargs):
+        """The default argument mapping."""
+        return args, kwargs
+
+    def unpartial(self, args: tuple, kwargs: dict) -> tuple[Callable, tuple, dict]:
+        return _unpartial(self._func_fw, args, kwargs)
+
+
+def _unpartial(f, args=(), kwargs={}) -> tuple[Callable, tuple, dict]:
+    if isinstance(f, partial):
+        _func = f.func
+        _args = f.args + args
+        _kwargs = dict(**f.keywords, **kwargs)
+        return _unpartial(_func, _args, _kwargs)
+    # elif isinstance(f, MethodType):
+    #     _func = f.__func__
+    #     _args = (f.__self__,) + args
+    #     return _unpartial(_func, _args, kwargs)
+    kwargs = kwargs or {}
+    return f, args, kwargs
