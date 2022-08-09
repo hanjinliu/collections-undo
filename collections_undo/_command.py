@@ -128,6 +128,8 @@ class Command(_CommandBase):
 
 
 class CommandGroup(_CommandBase):
+    """A group of commands."""
+
     def __init__(
         self,
         commands: Iterable[Command],
@@ -143,6 +145,10 @@ class CommandGroup(_CommandBase):
     def commands(self) -> list[Command]:
         """List of commands."""
         return list(self._commands)
+
+    def __getitem__(self, index: int) -> Command:
+        """Get the command at the given index."""
+        return self._commands[index]
 
     def __iter__(self) -> Iterator[Command]:
         """Iterate over all the commands."""
