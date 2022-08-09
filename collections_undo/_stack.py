@@ -16,7 +16,7 @@ from functools import wraps
 
 from ._reversible import ReversibleFunction
 from ._undoable import UndoableInterface, UndoableProperty
-from ._command import Command
+from ._command import Command, _CommandBase
 from ._const import empty
 
 if TYPE_CHECKING:
@@ -102,15 +102,15 @@ class ManagerState:
         self.measure = measure
         self.maxsize = maxsize
         self.is_blocked = False
-        self.stack_undo: list[Command] = []
-        self.stack_redo: list[Command] = []
+        self.stack_undo: list[_CommandBase] = []
+        self.stack_redo: list[_CommandBase] = []
         self.stack_undo_size = 0.0
         self.stack_redo_size = 0.0
         self.called_callbacks: CallbackList[
-            Callable[[Command, CallType], Any]
+            Callable[[_CommandBase, CallType], Any]
         ] = CallbackList()
         self.errored_callbacks: CallbackList[
-            Callable[[Command, Exception], Any]
+            Callable[[_CommandBase, Exception], Any]
         ] = CallbackList()
 
 
@@ -154,12 +154,12 @@ class UndoManager:
         return self._state.is_blocked
 
     @property
-    def called(self) -> CallbackList[Callable[[Command, CallType], Any]]:
+    def called(self) -> CallbackList[Callable[[_CommandBase, CallType], Any]]:
         """Callback list for called events."""
         return self._state.called_callbacks
 
     @property
-    def errored(self) -> CallbackList[Callable[[Command, Exception], Any]]:
+    def errored(self) -> CallbackList[Callable[[_CommandBase, Exception], Any]]:
         """Callback list for errored events."""
         return self._state.errored_callbacks
 
@@ -211,12 +211,12 @@ class UndoManager:
     #     return out
 
     @property
-    def stack_undo(self) -> list[Command]:
+    def stack_undo(self) -> list[_CommandBase]:
         """List of undo stack."""
         return list(self._state.stack_undo)
 
     @property
-    def stack_redo(self) -> list[Command]:
+    def stack_redo(self) -> list[_CommandBase]:
         """List of redo stack."""
         return list(self._state.stack_redo)
 
@@ -238,7 +238,7 @@ class UndoManager:
         """True if stack is empty."""
         return len(self._state.stack_undo) == 0 and len(self._state.stack_redo) == 0
 
-    def append(self, cmd: Command) -> None:
+    def append(self, cmd: _CommandBase) -> None:
         """Append new command to the undo stack."""
         if self.is_blocked:
             return None
