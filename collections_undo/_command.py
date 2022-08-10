@@ -1,11 +1,11 @@
 from __future__ import annotations
 from abc import ABC, abstractmethod, abstractproperty
-from typing import Any, Callable, Iterable, Iterator, Union, TYPE_CHECKING
+from typing import Any, Callable, Iterable, Iterator, TYPE_CHECKING
 from dataclasses import dataclass
 
 from ._reversible import ReversibleFunction
 
-FormatterType = Union[Callable[["Command"], str], str]
+FormatterType = Callable[["Command"], str]
 
 if TYPE_CHECKING:
     from typing_extensions import Self
@@ -53,6 +53,11 @@ class Command(_CommandBase):
     args: tuple[Any, ...]
     kwargs: dict[str, Any]
     size: float = 0.0
+    formatter: Callable | None = None
+
+    def __post_init__(self):
+        if self.formatter is None:
+            self.formatter = Command._format_default
 
     def __repr__(self) -> str:
         _cls = type(self).__name__
@@ -91,19 +96,18 @@ class Command(_CommandBase):
 
         return generate(self, ns)
 
-    def format(self, fmt: FormatterType | None = None) -> str:
+    def format(self, fmt: Callable[[Command], str] | None = None) -> str:
         """
         Format command to string.
 
         A format string or a callable can be used to format the command.
         Following formatters are equivalent.
 
-        >>> cmd.format("{}({})")
         >>> cmd.format(lambda f, x: f"{f}({x})")
 
         Parameters
         ----------
-        fmt : str or callable, optional
+        fmt : callable, optional
             The formatter. If None, the default formatter will be used.
 
         Returns
@@ -112,19 +116,32 @@ class Command(_CommandBase):
             The formatted command string.
         """
         rf = self.func
-        func, args, kwargs = rf.unpartial(self.args, self.kwargs)
+        args, kwargs = rf._default_map_args(self.args, self.kwargs)
+
         if fmt is None:
-            _fmt = self.func._default_formatter
+            _fmt = self.formatter
+        elif callable(fmt):
+            _fmt = fmt
         else:
-            args, kwargs = rf.map_args(args, kwargs)
-            if isinstance(fmt, str):
-                _fmt = fmt.format
-            elif callable(fmt):
-                _fmt = fmt
-            else:
-                raise TypeError(f"Cannot use {type(fmt)} as a formatter.")
-        fn = getattr(func, "__name__", str(func))
-        return _fmt(fn, *args, **kwargs)
+            raise TypeError(f"Cannot use {type(fmt)} as a formatter.")
+
+        cmd = type(self)(self.func, args, kwargs)
+        return _fmt(cmd)
+
+    def _format_default(self):
+        func, args, kwargs = self.func.unpartial(self.args, self.kwargs)
+        _args = list(map(_fmt_arg, args))
+        _args += list(f"{k}={_fmt_arg(v)}" for k, v in kwargs.items())
+        _args = ", ".join(_args)
+        _fn = getattr(func, "__name__", str(func))
+        return f"{_fn}({_args})"
+
+
+def _fmt_arg(v: Any) -> str:
+    v_repr = repr(v)
+    if len(v_repr) > 18:
+        v_repr = "#" + type(v).__name__ + "#"
+    return v_repr
 
 
 class CommandGroup(_CommandBase):

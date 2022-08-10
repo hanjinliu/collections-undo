@@ -50,4 +50,3 @@ def test_format_command():
     a.f(1, 2, 3)
 
     assert a.mgr.stack_undo[0].format() == "f(1, 2, 3)"
-    assert a.mgr.stack_undo[0].format("{}, {}, {}, {}") == "f, 1, 2, 3"

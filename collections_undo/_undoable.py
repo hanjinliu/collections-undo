@@ -108,7 +108,7 @@ class UndoableInterface:
             return self._freceive(*args, **kwargs)
 
         fn = ReversibleFunction(fw, rv, mgr=self._mgr)
-        fn.map_args = self._map_args
+        fn._default_map_args = self._map_args
         wraps(self)(fn)
         return fn
 

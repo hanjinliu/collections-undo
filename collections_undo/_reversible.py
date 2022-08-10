@@ -117,7 +117,7 @@ class ReversibleFunction:
                 inverse_func=inv_func,
             )
             out.__name__ = self.__name__
-            out.map_args = self.map_args
+            out._default_map_args = self._default_map_args
         return out
 
     @classmethod
@@ -157,18 +157,19 @@ class ReversibleFunction:
 
     def _default_formatter(self, func: Callable, *args, **kwargs) -> str:
         func, args, kwargs = _unpartial(func, args, kwargs)
-        args, kwargs = self.map_args(args, kwargs)
+        args, kwargs = self._default_map_args(args, kwargs)
         _args = list(map(_fmt_arg, args))
         _args += list(f"{k}={_fmt_arg(v)}" for k, v in kwargs.items())
         _args = ", ".join(_args)
         _fn = getattr(func, "__name__", str(func))
         return f"{_fn}({_args})"
 
-    def map_args(self, args, kwargs):
+    def _default_map_args(self, args, kwargs):
         """The default argument mapping."""
         return args, kwargs
 
     def unpartial(self, args: tuple, kwargs: dict) -> tuple[Callable, tuple, dict]:
+        """Resolve partial function and arguments."""
         return _unpartial(self._func_fw, args, kwargs)
 
 
