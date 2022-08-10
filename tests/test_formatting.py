@@ -50,3 +50,45 @@ def test_format_command():
     a.f(1, 2, 3)
 
     assert a.mgr.stack_undo[0].format() == "f(1, 2, 3)"
+
+def test_custom_formatter():
+    class A:
+        mgr = UndoManager()
+
+        @mgr.interface
+        def f(self, a, b, c):
+            ...
+
+        @f.server
+        def f(self, a, b, c):
+            return (a, b, c), {}
+
+        @f.set_mapper
+        def _f_fmt(self, a, b, c):
+            return (a + 1, b + 1, c + 1), {}
+
+    a = A()
+    a.f(1, 2, 3)
+
+    assert a.mgr.stack_undo[0].format() == "f(2, 3, 4)"
+
+def test_custom_mapping():
+    class A:
+        mgr = UndoManager()
+
+        @mgr.interface
+        def f(self, a, b, c):
+            ...
+
+        @f.server
+        def f(self, a, b, c):
+            return (a, b, c), {}
+
+        @f.set_formatter
+        def _f_fmt(self, a, b, c):
+            return f"F({a}, {b}, {c})"
+
+    a = A()
+    a.f(1, 2, 3)
+
+    assert a.mgr.stack_undo[0].format() == "F(1, 2, 3)"

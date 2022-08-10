@@ -1,5 +1,5 @@
 from __future__ import annotations
-from functools import wraps
+from functools import partial, wraps
 from typing import Any, Callable, TYPE_CHECKING, Literal, TypeVar
 from ._reversible import ReversibleFunction
 from ._const import empty
@@ -16,6 +16,12 @@ if TYPE_CHECKING:
 
 def _dummy_func(*args, **kwargs) -> None:
     return None
+
+
+FormatterType = Callable[[Callable, tuple, dict[str, Any]], str]
+_Formatter = TypeVar("_Formatter", bound=FormatterType)
+ArgsMappingType = Callable[[tuple, dict[str, Any]], tuple[tuple, dict[str, Any]]]
+_ArgsMappingType = TypeVar("_ArgsMappingType", bound=ArgsMappingType)
 
 
 class UndoableInterface:
@@ -46,22 +52,55 @@ class UndoableInterface:
         self._mgr = mgr
         self._func = None
         self._instances: dict[int, UndoableInterface] = {}
+        self._formatter = None
+        self._map_args = _default_interface_map_args
 
-    def server(self, fserve: Callable[_P, _Args]) -> Callable[_P, _Args]:
+    def server(self, fserve: Callable[_P, _Args]) -> UndoableInterface:
         """Set the server function."""
-        return UndoableInterface(
+        itf = UndoableInterface(
             fserve=fserve,
             freceive=self._freceive,
             mgr=self._mgr,
         )
+        itf._formatter = self._formatter
+        itf._map_args = self._map_args
+        return itf
 
-    def receiver(self, freceive: Callable[_P, _R]) -> Callable[_P, _R]:
+    def receiver(self, freceive: Callable[_P, _R]) -> UndoableInterface:
         """Set the receiver function."""
-        return UndoableInterface(
+        itf = UndoableInterface(
             fserve=self._fserve,
             freceive=freceive,
             mgr=self._mgr,
         )
+        itf._formatter = self._formatter
+        itf._map_args = self._map_args
+        return itf
+
+    def set_formatter(
+        self,
+        formatter: _Formatter,
+        /,
+    ) -> _Formatter:
+        if not callable(formatter):
+            raise TypeError(f"{formatter!r} is not callable")
+        self._formatter = formatter
+        return formatter
+
+    def set_mapper(
+        self,
+        mapping: _ArgsMappingType,
+        /,
+    ) -> _ArgsMappingType:
+        if not callable(mapping):
+            raise TypeError(f"{mapping!r} is not callable")
+
+        def _mapping(self, new, old):
+            args, kwargs = new
+            return mapping(self, *args, **kwargs)
+
+        self._map_args = _mapping
+        return mapping
 
     @property
     def func(self) -> ReversibleFunction:
@@ -89,6 +128,9 @@ class UndoableInterface:
                 fserve=self._fserve.__get__(obj, objtype),
                 mgr=self._mgr.__get__(obj, objtype),
             )
+            if self._formatter is not None:
+                out._formatter = partial(self._formatter, obj)
+            out._map_args = partial(self._map_args, obj)
         return out
 
     def __repr__(self) -> str:
@@ -108,14 +150,16 @@ class UndoableInterface:
             return self._freceive(*args, **kwargs)
 
         fn = ReversibleFunction(fw, rv, mgr=self._mgr)
-        fn._default_map_args = self._map_args
-        wraps(self)(fn)
+        fn.__name__ = self.__name__
+
+        if self._formatter is not None:
+            fn._formatter = self._formatter
+        fn._map_args = self._map_args
         return fn
 
-    @staticmethod
-    def _map_args(args, kwargs):
-        new, old = args
-        return new
+
+def _default_interface_map_args(new, old):
+    return new
 
 
 class UndoableProperty(property):

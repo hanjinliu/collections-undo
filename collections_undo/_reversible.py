@@ -53,6 +53,12 @@ class ReversibleFunction:
         wraps(func)(self)
         self._instances: dict[int, Self] = {}
 
+        # Default argument mapping.
+        self._formatter: Callable[
+            [Callable, tuple, dict[str, Any]], str
+        ] = self._create_default_formatter(func)
+        self._map_args: Callable[[tuple, dict], tuple[tuple, dict]] = _default_map_args
+
     def __hash__(self) -> int:
         """ReversibleFunction is immutable in public level so use id for hashing."""
         return id(self)
@@ -81,10 +87,8 @@ class ReversibleFunction:
         )
 
     def format_forward_call(self, *args, **kwargs):
-        return self._default_formatter(self._func_fw, *args, **kwargs)
-
-    def format_reverse_call(self, *args, **kwargs):
-        return self._default_formatter(self._func_rv, *args, **kwargs)
+        args, kwargs = self._map_args(*args, **kwargs)
+        return self._formatter(*args, **kwargs)
 
     def _call_with_callback(self, *args: _P.args, **kwargs: _P.kwargs) -> _R:
         out = self._call_raw(*args, **kwargs)
@@ -117,7 +121,8 @@ class ReversibleFunction:
                 inverse_func=inv_func,
             )
             out.__name__ = self.__name__
-            out._default_map_args = self._default_map_args
+            out._formatter = partial(self._formatter, obj)
+            out._map_args = partial(self._map_args, obj)
         return out
 
     @classmethod
@@ -155,22 +160,26 @@ class ReversibleFunction:
             mgr=self._mgr,
         )
 
-    def _default_formatter(self, func: Callable, *args, **kwargs) -> str:
-        func, args, kwargs = _unpartial(func, args, kwargs)
-        args, kwargs = self._default_map_args(args, kwargs)
-        _args = list(map(_fmt_arg, args))
-        _args += list(f"{k}={_fmt_arg(v)}" for k, v in kwargs.items())
-        _args = ", ".join(_args)
-        _fn = getattr(func, "__name__", str(func))
-        return f"{_fn}({_args})"
-
-    def _default_map_args(self, args, kwargs):
-        """The default argument mapping."""
-        return args, kwargs
+    def _create_default_formatter(self, func: Callable):
+        return partial(_default_formatter, func)
 
     def unpartial(self, args: tuple, kwargs: dict) -> tuple[Callable, tuple, dict]:
         """Resolve partial function and arguments."""
         return _unpartial(self._func_fw, args, kwargs)
+
+
+def _default_formatter(func: Callable, *args, **kwargs) -> str:
+    func, args, kwargs = _unpartial(func, args, kwargs)
+    _args = list(map(_fmt_arg, args))
+    _args += list(f"{k}={_fmt_arg(v)}" for k, v in kwargs.items())
+    _args = ", ".join(_args)
+    _fn = getattr(func, "__name__", str(func))
+    return f"{_fn}({_args})"
+
+
+def _default_map_args(*args, **kwargs):
+    """The default argument mapping."""
+    return args, kwargs
 
 
 def _unpartial(f, args=(), kwargs={}) -> tuple[Callable, tuple, dict]:
