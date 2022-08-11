@@ -1,4 +1,4 @@
-from collections_undo import UndoableSet
+from collections_undo.containers import UndoableSet
 
 def test_set():
     s = UndoableSet([1, 2, 3])

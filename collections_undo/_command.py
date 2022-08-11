@@ -24,6 +24,10 @@ class _CommandBase(ABC):
     def _revert(self):
         """Revert the command."""
 
+    @abstractmethod
+    def format(self) -> str:
+        """Format the command."""
+
     @abstractproperty
     def size(self) -> str:
         """The size of the command."""
@@ -53,11 +57,6 @@ class Command(_CommandBase):
     args: tuple[Any, ...]
     kwargs: dict[str, Any]
     size: float = 0.0
-    formatter: Callable | None = None
-
-    def __post_init__(self):
-        if self.formatter is None:
-            self.formatter = Command._format_default
 
     def __repr__(self) -> str:
         _cls = type(self).__name__
@@ -96,52 +95,22 @@ class Command(_CommandBase):
 
         return generate(self, ns)
 
-    def format(self, fmt: Callable[[Command], str] | None = None) -> str:
+    def format(self, inv: bool = False) -> str:
         """
         Format command to string.
 
-        A format string or a callable can be used to format the command.
-        Following formatters are equivalent.
-
-        >>> cmd.format(lambda f, x: f"{f}({x})")
-
         Parameters
         ----------
-        fmt : callable, optional
-            The formatter. If None, the default formatter will be used.
-
+        inv : bool, default si False
+            Format as a reverse command if true.
         Returns
         -------
         str
             The formatted command string.
         """
-        rf = self.func
-        args, kwargs = rf._default_map_args(self.args, self.kwargs)
-
-        if fmt is None:
-            _fmt = self.formatter
-        elif callable(fmt):
-            _fmt = fmt
-        else:
-            raise TypeError(f"Cannot use {type(fmt)} as a formatter.")
-
-        cmd = type(self)(self.func, args, kwargs)
-        return _fmt(cmd)
-
-    def _format_default(self):
-        func, args, kwargs = self.func.unpartial(self.args, self.kwargs)
-        _args = list(map(_fmt_arg, args))
-        _args += list(f"{k}={_fmt_arg(v)}" for k, v in kwargs.items())
-        _args = ", ".join(_args)
-        _fn = getattr(func, "__name__", str(func))
-        return f"{_fn}({_args})"
-
-
-def _fmt_arg(v: Any) -> str:
-    v_repr = repr(v)
-    if len(v_repr) > 18:
-        v_repr = "#" + type(v).__name__ + "#"
-    return v_repr
+        if inv:
+            return self.func.format_reverse_call(*self.args, **self.kwargs)
+        return self.func.format_forward_call(*self.args, **self.kwargs)
 
 
 class CommandGroup(_CommandBase):
@@ -201,7 +170,7 @@ class CommandGroup(_CommandBase):
 
     def format(self, fmt: Callable | None = None) -> str:
         if fmt is not None:
-            return fmt(self.commands)
+            return fmt(self)
         return self._formatter(self)
 
     def _format_default(self) -> str:

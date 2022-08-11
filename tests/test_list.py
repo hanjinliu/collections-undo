@@ -1,4 +1,4 @@
-from collections_undo import UndoableList
+from collections_undo.containers import UndoableList
 
 def test_setitem():
     l = UndoableList([1, 2, 3])

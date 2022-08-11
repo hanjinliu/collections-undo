@@ -140,7 +140,7 @@ class UndoManager:
             s_redo = "[]"
         return f"{cls_name}(\n  undo={s_undo},\n  redo={s_redo}\n)"
 
-    def __get__(self, obj, objtype=None) -> UndoManager:
+    def __get__(self, obj, objtype=None) -> Self:
         if obj is None:
             return self
         _id = id(obj)
@@ -191,7 +191,7 @@ class UndoManager:
         self.called.evoke(cmd, CallType.redo)
         return out
 
-    def link(self, other: UndoManager) -> None:
+    def link(self, other: Self) -> None:
         if not isinstance(other, UndoManager):
             raise TypeError(f"Cannot link {other!r}.")
         if self.empty:
