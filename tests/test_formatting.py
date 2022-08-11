@@ -94,13 +94,13 @@ def test_format_command():
     assert a.mgr.stack_undo[-1].format() == "a(1, 2)"
 
     a.a(1, y=3)
-    assert a.mgr.stack_undo[-1].format() == "a(1, 3)"
+    assert a.mgr.stack_undo[-1].format() == "a(1, y=3)"
 
     a.f(1, 2, 3)
     assert a.mgr.stack_undo[-1].format() == "f(1, 2, 3)"
 
     a.f(1, 2, c=4)
-    assert a.mgr.stack_undo[-1].format() == "f(1, 2, 4)"
+    assert a.mgr.stack_undo[-1].format() == "f(1, 2, c=4)"
 
 def test_custom_formatter():
     mgr = UndoManager()
