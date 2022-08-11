@@ -24,6 +24,10 @@ class _CommandBase(ABC):
     def _revert(self):
         """Revert the command."""
 
+    @abstractmethod
+    def format(self) -> str:
+        """Format the command."""
+
     @abstractproperty
     def size(self) -> str:
         """The size of the command."""
