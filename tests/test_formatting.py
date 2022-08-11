@@ -72,6 +72,14 @@ def test_format_command():
     class A:
         mgr = UndoManager()
 
+        @mgr.undoable
+        def a(self, x, y):
+            ...
+
+        @a.undo_def
+        def a(self, x, y):
+            ...
+
         @mgr.interface
         def f(self, a, b, c):
             ...
@@ -81,12 +89,33 @@ def test_format_command():
             return (a, b, c), {}
 
     a = A()
-    a.f(1, 2, 3)
 
-    assert a.mgr.stack_undo[0].format() == "f(1, 2, 3)"
+    a.a(1, 2)
+    assert a.mgr.stack_undo[-1].format() == "a(1, 2)"
+
+    a.a(1, y=3)
+    assert a.mgr.stack_undo[-1].format() == "a(1, 3)"
+
+    a.f(1, 2, 3)
+    assert a.mgr.stack_undo[-1].format() == "f(1, 2, 3)"
+
+    a.f(1, 2, c=4)
+    assert a.mgr.stack_undo[-1].format() == "f(1, 2, 4)"
 
 def test_custom_formatter():
     mgr = UndoManager()
+
+    @mgr.undoable
+    def a(x, y):
+        ...
+
+    @a.undo_def
+    def a(x, y):
+        ...
+
+    @a.set_formatter
+    def _a_fmt(x, y):
+        return f"A({x}, {y})"
 
     @mgr.interface
     def f(a, b, c):
@@ -100,9 +129,14 @@ def test_custom_formatter():
     def _f_fmt(a, b, c):
         return f"F({a}, {b}, {c})"
 
-    f(1, 2, 3)
+    a(1, 2)
+    assert mgr.stack_undo[-1].format() == "A(1, 2)"
 
-    assert mgr.stack_undo[0].format() == "F(1, 2, 3)"
+    a(1, y=3)
+    assert mgr.stack_undo[-1].format() == "A(1, 3)"
+
+    f(1, 2, 3)
+    assert mgr.stack_undo[-1].format() == "F(1, 2, 3)"
 
     f(1, b=2, c=4)
     assert mgr.stack_undo[-1].format() == "F(1, 2, 4)"
@@ -111,6 +145,18 @@ def test_custom_formatter():
 def test_custom_formatter_in_class():
     class A:
         mgr = UndoManager()
+
+        @mgr.undoable
+        def a(self, x, y):
+            ...
+
+        @a.undo_def
+        def a(self, x, y):
+            ...
+
+        @a.set_formatter
+        def _a_fmt(self, x, y):
+            return f"A({x}, {y})"
 
         @mgr.interface
         def f(self, a, b, c):
@@ -125,10 +171,15 @@ def test_custom_formatter_in_class():
             return f"F({a}, {b}, {c})"
 
     a = A()
-    a.f(1, 2, 3)
 
-    assert a.mgr.stack_undo[0].format() == "F(1, 2, 3)"
+    a.a(1, 2)
+    assert a.mgr.stack_undo[-1].format() == "A(1, 2)"
+
+    a.a(1, y=3)
+    assert a.mgr.stack_undo[-1].format() == "A(1, 3)"
+
+    a.f(1, 2, 3)
+    assert a.mgr.stack_undo[-1].format() == "F(1, 2, 3)"
 
     a.f(1, b=2, c=4)
-
     assert a.mgr.stack_undo[-1].format() == "F(1, 2, 4)"

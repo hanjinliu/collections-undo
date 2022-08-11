@@ -29,12 +29,14 @@ class Undefined:
     def __call__(self, *args: Any, **kwargs: Any) -> Any:
         raise NotReversibleError(f"Function {self.__name__} is not reversible.")
 
+    def __get__(self, obj, objtype=None):
+        return self
 
-def _fmt_arg(v: Any) -> str:
-    v_repr = repr(v)
-    if len(v_repr) > 18:
-        v_repr = "#" + type(v).__name__ + "#"
-    return v_repr
+
+def _as_method(func, obj):
+    if hasattr(func, "__get__"):
+        return func.__get__(obj)
+    return partial(func, obj)
 
 
 class ReversibleFunction:
@@ -124,7 +126,7 @@ class ReversibleFunction:
 
     def _call_with_callback(self, *args: _P.args, **kwargs: _P.kwargs) -> _R:
         out = self._call_raw(*args, **kwargs)
-        self._mgr._append_command(self, *args, *kwargs)
+        self._mgr._append_command(self, *args, **kwargs)
         return out
 
     def _call_raw(self, *args: _P.args, **kwargs: _P.kwargs) -> _R:
@@ -154,10 +156,12 @@ class ReversibleFunction:
             )
             out.__name__ = self.__name__
             if self._formatter_fw is self._formatter_rv:
-                out._formatter_fw = out._formatter_rv = partial(self._formatter_fw, obj)
+                out._formatter_fw = out._formatter_rv = _as_method(
+                    self._formatter_fw, obj
+                )
             else:
-                out._formatter_fw = partial(self._formatter_fw, obj)
-                out._formatter_rv = partial(self._formatter_rv, obj)
+                out._formatter_fw = _as_method(self._formatter_fw, obj)
+                out._formatter_rv = _as_method(self._formatter_rv, obj)
             out._map_args = self._map_args
         return out
 

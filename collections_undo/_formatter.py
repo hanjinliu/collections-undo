@@ -1,8 +1,28 @@
 from __future__ import annotations
 from typing import Callable, Literal, TypeVar, overload
 from types import FunctionType, BuiltinFunctionType, MethodType
+import weakref
 
 _T = TypeVar("_T", bound=type)
+
+
+class DefaultFormatter:
+    def __init__(self, func, factory: FormatterFactory):
+        self._func = func
+        self._factory = weakref.ref(factory)
+
+    def __get__(self, obj, objtype=None):
+        if obj is None:
+            return self
+        return self.__class__(self._func.__get__(obj), self._factory())
+
+    def __call__(self, *args, **kwargs) -> str:
+        _map = self._factory().map_object
+        _args = list(map(_map, args))
+        _args += list(f"{k}={_map(v)}" for k, v in kwargs.items())
+        _args = ", ".join(_args)
+        _fn = getattr(self._func, "__name__", str(self._func))
+        return f"{_fn}({_args})"
 
 
 class FormatterFactory:
@@ -10,6 +30,7 @@ class FormatterFactory:
         self._type_map: dict[type[_T], Callable[[_T], str]] = {}
 
     def map_object(self, value: _T) -> str:
+        """Map object to string."""
         val_type = type(value)
         f = self._type_map.get(val_type, None)
         if f is not None:
@@ -21,14 +42,7 @@ class FormatterFactory:
         return repr(value)
 
     def get_formatter(self, func: Callable):
-        def _fmt(*args, **kwargs) -> str:
-            _args = list(map(self.map_object, args))
-            _args += list(f"{k}={self.map_object(v)}" for k, v in kwargs.items())
-            _args = ", ".join(_args)
-            _fn = getattr(func, "__name__", str(func))
-            return f"{_fn}({_args})"
-
-        return _fmt
+        return DefaultFormatter(func, self)
 
     @overload
     def register_type(
