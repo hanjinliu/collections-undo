@@ -11,6 +11,8 @@ from ._container import (
     UndoableSet,
 )
 
+from . import fmt
+
 __all__ = [
     "UndoManager",
     "empty",
@@ -20,4 +22,5 @@ __all__ = [
     "UndoableDict",
     "UndoableList",
     "UndoableSet",
+    "fmt",
 ]
