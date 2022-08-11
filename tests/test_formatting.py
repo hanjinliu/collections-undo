@@ -1,4 +1,39 @@
 from collections_undo import UndoManager
+from collections_undo import fmt
+
+# fmt: off
+class mylist(list): ...
+class mytuple(tuple): ...
+class myset(set): ...
+class mydict(dict): ...
+# fmt: on
+
+def test_object_mapping():
+    assert fmt.map_object(1) == "1"
+    assert fmt.map_object("") == "''"
+    assert fmt.map_object(None) == "None"
+    assert fmt.map_object(()) == "()"
+    assert fmt.map_object((1,)) == "(1,)"
+    assert fmt.map_object([(), (1,), set()]) == "[(), (1,), set()]"
+    assert fmt.map_object(True) == "True"
+    assert fmt.map_object(slice(3, 10, 2)) == "slice(3, 10, 2)"
+    assert fmt.map_object(slice(3, 10, None)) == "slice(3, 10)"
+    assert fmt.map_object(slice(None, 3, None)) == "slice(3)"
+    assert fmt.map_object(range(3, 10, 2)) == "range(3, 10, 2)"
+    assert fmt.map_object(range(3, 10)) == "range(3, 10)"
+    assert fmt.map_object(range(0, 10)) == "range(10)"
+    assert fmt.map_object(1 - 3j) == "(1-3j)"
+    assert fmt.map_object(bytes("a", encoding="utf-8")) == "b'a'"
+    assert fmt.map_object({"a": [1, 2], "b": [0.1, 0.2]}) == "{'a': [1, 2], 'b': [0.1, 0.2]}"
+    assert fmt.map_object(set()) == "set()"
+    assert fmt.map_object({1, 2, 3}) == "{1, 2, 3}"
+    assert fmt.map_object(frozenset()) == "frozenset([])"
+    assert fmt.map_object(frozenset([1, 2])) == "frozenset([1, 2])"
+
+    assert fmt.map_object(mylist([1, 2])) == "mylist([1, 2])"
+    assert fmt.map_object(mytuple([1, 2])) == "mytuple([1, 2])"
+    assert fmt.map_object(myset([1, 2])) == "myset([1, 2])"
+    assert fmt.map_object(mydict(a=1, b=2)) == "mydict({'a': 1, 'b': 2})"
 
 def test_interface():
     mgr = UndoManager()

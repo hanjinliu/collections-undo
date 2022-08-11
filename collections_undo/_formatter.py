@@ -17,7 +17,7 @@ class FormatterFactory:
         for tp, tmap in self._type_map.items():
             if isinstance(value, tp):
                 self._type_map[val_type] = tmap
-                return tmap
+                return tmap(value)
         return repr(value)
 
     def get_formatter(self, func: Callable):
@@ -77,48 +77,65 @@ def _get_name(e):
 
 def _slice_str(sl: slice) -> str:
     _s0, _s1, _ss = sl.start, sl.stop, sl.step
-    if _s0 is None or _s0 == 0:
-        s0 = ""
-    else:
-        s0 = DEFAULT_FACTORY.map_object(_s0)
-    if _s1 is None:
-        s1 = ""
-    else:
-        s1 = DEFAULT_FACTORY.map_object(_s1)
+    tpname = type(sl).__name__
     if _ss is None:
-        ss = ""
-    else:
-        ss = DEFAULT_FACTORY.map_object(_ss)
-    out = f"{s0}:{s1}:{ss}"
-    if out.endswith("::"):
-        return out[:-1]
-    return out
+        if _s0 is None:
+            return f"{tpname}({map_object(_s1)})"
+        return f"{tpname}({map_object(_s0)}, {map_object(_s1)})"
+    return f"{tpname}({map_object(_s0)}, {map_object(_s1)}, {map_object(_ss)})"
+
+
+def _range_str(sl: range) -> str:
+    _s0, _s1, _ss = sl.start, sl.stop, sl.step
+    tpname = type(sl).__name__
+    if _ss == 1:
+        if _s0 == 0:
+            return f"{tpname}({map_object(_s1)})"
+        return f"{tpname}({map_object(_s0)}, {map_object(_s1)})"
+    return f"{tpname}({map_object(_s0)}, {map_object(_s1)}, {map_object(_ss)})"
 
 
 def _list_str(lst: list) -> str:
-    return "[" + ", ".join(map(DEFAULT_FACTORY.map_object, lst)) + "]"
+    tp = type(lst)
+    if tp is list:
+        return "[" + ", ".join(map(map_object, lst)) + "]"
+    return f"{tp.__name__}([" + ", ".join(map(map_object, lst)) + "])"
 
 
 def _dict_str(dct: dict) -> str:
-    _keys = map(DEFAULT_FACTORY.map_object, dct.keys())
-    _vals = map(DEFAULT_FACTORY.map_object, dct.values())
-    return "{" + ", ".join(f"{k}: {v}" for k, v in zip(_keys, _vals)) + "}"
+    _keys = map(map_object, dct.keys())
+    _vals = map(map_object, dct.values())
+    tp = type(dct)
+    if tp is dict:
+        return "{" + ", ".join(f"{k}: {v}" for k, v in zip(_keys, _vals)) + "}"
+    return (
+        f"{tp.__name__}({{"
+        + ", ".join(f"{k}: {v}" for k, v in zip(_keys, _vals))
+        + "})"
+    )
 
 
-def _set_str(set: set) -> str:
-    if len(set) == 0:
-        return "set()"
-    return "{" + ", ".join(map(DEFAULT_FACTORY.map_object, set)) + "}"
+def _set_str(s: set) -> str:
+    tp = type(s)
+    if len(s) == 0:
+        return f"{tp.__name__}()"
+    if tp is set:
+        return "{" + ", ".join(map(map_object, s)) + "}"
+    return f"{tp.__name__}([" + ", ".join(map(map_object, s)) + "])"
 
 
 def _tuple_str(tpl: tuple) -> str:
-    if len(tpl) == 1:
-        return f"({DEFAULT_FACTORY.map_object(tpl[0])},)"
-    return "(" + ", ".join(map(DEFAULT_FACTORY.map_object, tpl)) + ")"
+    tp = type(tpl)
+    if tp is tuple:
+        if len(tpl) == 1:
+            return f"({map_object(tpl[0])},)"
+        return "(" + ", ".join(map(map_object, tpl)) + ")"
+    return f"{tp.__name__}([" + ", ".join(map(map_object, tpl)) + "])"
 
 
 def _frozenset_str(fset: frozenset) -> str:
-    return f"frozenset({_list_str(fset)})"
+    s = "[" + ", ".join(map(map_object, fset)) + "]"
+    return f"frozenset({s})"
 
 
 DEFAULT_FACTORY.register_type(_get_name, type)
@@ -130,6 +147,7 @@ DEFAULT_FACTORY.register_type(repr, str)
 DEFAULT_FACTORY.register_type(repr, bytes)
 DEFAULT_FACTORY.register_type(repr, bytearray)
 DEFAULT_FACTORY.register_type(_slice_str, slice)
+DEFAULT_FACTORY.register_type(_range_str, range)
 DEFAULT_FACTORY.register_type(str, int)
 DEFAULT_FACTORY.register_type(str, float)
 DEFAULT_FACTORY.register_type(str, complex)
