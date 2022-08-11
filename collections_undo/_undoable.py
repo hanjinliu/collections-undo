@@ -53,7 +53,6 @@ class UndoableInterface:
         self._func = None
         self._instances: dict[int, UndoableInterface] = {}
         self._formatter = None
-        self._map_args = _default_interface_map_args
 
     def server(self, fserve: Callable[_P, _Args]) -> UndoableInterface:
         """Set the server function."""
@@ -63,7 +62,6 @@ class UndoableInterface:
             mgr=self._mgr,
         )
         itf._formatter = self._formatter
-        itf._map_args = self._map_args
         return itf
 
     def receiver(self, freceive: Callable[_P, _R]) -> UndoableInterface:
@@ -74,7 +72,6 @@ class UndoableInterface:
             mgr=self._mgr,
         )
         itf._formatter = self._formatter
-        itf._map_args = self._map_args
         return itf
 
     def set_formatter(
@@ -86,21 +83,6 @@ class UndoableInterface:
             raise TypeError(f"{formatter!r} is not callable")
         self._formatter = formatter
         return formatter
-
-    def set_mapper(
-        self,
-        mapping: _ArgsMappingType,
-        /,
-    ) -> _ArgsMappingType:
-        if not callable(mapping):
-            raise TypeError(f"{mapping!r} is not callable")
-
-        def _mapping(self, new, old):
-            args, kwargs = new
-            return mapping(self, *args, **kwargs)
-
-        self._map_args = _mapping
-        return mapping
 
     @property
     def func(self) -> ReversibleFunction:
@@ -130,7 +112,6 @@ class UndoableInterface:
             )
             if self._formatter is not None:
                 out._formatter = partial(self._formatter, obj)
-            out._map_args = partial(self._map_args, obj)
         return out
 
     def __repr__(self) -> str:
@@ -154,12 +135,14 @@ class UndoableInterface:
 
         if self._formatter is not None:
             fn._formatter = self._formatter
-        fn._map_args = self._map_args
+
+        fn._map_args = _mapping
         return fn
 
 
-def _default_interface_map_args(new, old):
-    return new
+def _mapping(new, old):
+    args, kwargs = new
+    return args, kwargs
 
 
 class UndoableProperty(property):

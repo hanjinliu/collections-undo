@@ -122,7 +122,8 @@ class ReversibleFunction:
             )
             out.__name__ = self.__name__
             out._formatter = partial(self._formatter, obj)
-            out._map_args = partial(self._map_args, obj)
+            out._map_args = self._map_args
+            # out._map_args = partial(self._map_args, obj)
         return out
 
     @classmethod
