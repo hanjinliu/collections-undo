@@ -91,23 +91,22 @@ class Command(_CommandBase):
 
         return generate(self, ns)
 
-    def format(self) -> str:
+    def format(self, inv: bool = False) -> str:
         """
         Format command to string.
 
+        Parameters
+        ----------
+        inv : bool, default si False
+            Format as a reverse command if true.
         Returns
         -------
         str
             The formatted command string.
         """
+        if inv:
+            return self.func.format_reverse_call(*self.args, **self.kwargs)
         return self.func.format_forward_call(*self.args, **self.kwargs)
-
-
-def _fmt_arg(v: Any) -> str:
-    v_repr = repr(v)
-    if len(v_repr) > 18:
-        v_repr = "#" + type(v).__name__ + "#"
-    return v_repr
 
 
 class CommandGroup(_CommandBase):
@@ -167,7 +166,7 @@ class CommandGroup(_CommandBase):
 
     def format(self, fmt: Callable | None = None) -> str:
         if fmt is not None:
-            return fmt(self.commands)
+            return fmt(self)
         return self._formatter(self)
 
     def _format_default(self) -> str:
