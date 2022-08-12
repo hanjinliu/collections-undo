@@ -76,25 +76,6 @@ class Command(_CommandBase):
         group = CommandGroup(cmds, formatter=formatter)
         return group
 
-    def to_code(self, ns: str | None = None) -> str:
-        """
-        Convert command to code.
-
-        Parameters
-        ----------
-        ns : str, optional
-            The namespace of the command. If None, the command will be converted
-            to a simple expression.
-
-        Returns
-        -------
-        str
-            The code of the command.
-        """
-        from ._codegen import generate
-
-        return generate(self, ns)
-
     def format(self, inv: bool = False) -> str:
         """
         Format command to string.

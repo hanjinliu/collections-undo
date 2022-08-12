@@ -1,3 +1,7 @@
+"""
+Using UndoManager in a way similar to Python object.
+"""
+
 from ._containers import (
     AbstractUndoableDict,
     AbstractUndoableList,
@@ -6,3 +10,12 @@ from ._containers import (
     UndoableList,
     UndoableSet,
 )
+
+__all__ = [
+    "AbstractUndoableDict",
+    "AbstractUndoableList",
+    "AbstractUndoableSet",
+    "UndoableDict",
+    "UndoableList",
+    "UndoableSet",
+]
