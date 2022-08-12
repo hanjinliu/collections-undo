@@ -363,10 +363,12 @@ class UndoManager:
     @contextmanager
     def merging(self, formatter: Callable | None = None) -> None:
         """Merge all the commands into a single command in this context."""
+        blocked = self._state.is_blocked
         len_before = len(self._state.stack_undo)
         yield None
-        len_after = len(self._state.stack_undo)
-        self.merge_commands(len_before, len_after, formatter=formatter)
+        if not blocked:
+            len_after = len(self._state.stack_undo)
+            self.merge_commands(len_before, len_after, formatter=formatter)
         return None
 
     @contextmanager

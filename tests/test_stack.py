@@ -233,3 +233,29 @@ def test_group():
     a.mgr.undo()
     assert a.mgr.stack_lengths == (0, 1)
     assert a._hist[-3:] == ["z", "y", "x"]
+
+def test_blocked():
+    mgr = UndoManager()
+
+    @mgr.undoable
+    def a(x):
+        return x
+
+    @mgr.undoable
+    def b():
+        a(0)
+
+    def c():
+        with mgr.merging():
+            a(1)
+            b()
+
+    @mgr.undoable
+    def d():
+        c()
+
+    assert mgr.stack_lengths == (0, 0)
+    c()
+    assert mgr.stack_lengths == (1, 0)
+    d()
+    assert mgr.stack_lengths == (2, 0)
