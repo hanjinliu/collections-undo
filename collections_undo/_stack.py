@@ -369,6 +369,7 @@ class UndoManager:
         if not blocked:
             len_after = len(self._state.stack_undo)
             self.merge_commands(len_before, len_after, formatter=formatter)
+            self.called.evoke(self._state.stack_undo[-1], CallType.call)
         return None
 
     @contextmanager

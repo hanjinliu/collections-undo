@@ -11,7 +11,6 @@ if TYPE_CHECKING:
     _P = ParamSpec("_P")
     _R = TypeVar("_R")
     _RR = TypeVar("_RR")
-    _F = TypeVar("_F", bound=Callable)
 
 _Fmt = TypeVar("_Fmt", bound=FormatterType)
 
@@ -56,6 +55,7 @@ class ReversibleFunction:
             inverse_func = Undefined(name=getattr(func, "__name__", str(func)))
         self._func_rv = inverse_func
         self._mgr = mgr
+        self._function_id = id(func)
         wraps(func)(self)
         self._instances: dict[int, Self] = {}
 
@@ -68,6 +68,9 @@ class ReversibleFunction:
         ] = self._formatter_fw
 
         self._map_args: Callable[[tuple, dict], tuple[tuple, dict]] = _default_map_args
+        self._merge_with: Callable[
+            [ReversibleFunction, tuple, dict], tuple[tuple, dict] | None
+        ] = _default_merge_with
 
     def __hash__(self) -> int:
         """ReversibleFunction is immutable in public level so use id for hashing."""
@@ -88,6 +91,10 @@ class ReversibleFunction:
     def __set_name__(self, owner: type, name: str) -> None:
         self.__name__ = name
 
+    @property
+    def function_id(self) -> int:
+        return self._function_id
+
     def undo_def(self, undo: Callable[_P, _RR]) -> Self:
         """Define inverse function and return a new object."""
         return self.__newlike__(
@@ -101,6 +108,7 @@ class ReversibleFunction:
         formatter: _Fmt,
         /,
     ) -> _Fmt:
+        """Set a formatter for the forward function."""
         if not callable(formatter):
             raise TypeError(f"{formatter!r} is not callable")
         self._formatter_fw = formatter
@@ -111,6 +119,7 @@ class ReversibleFunction:
         formatter: _Fmt,
         /,
     ) -> _Fmt:
+        """Set a formatter for the reverse function."""
         if not callable(formatter):
             raise TypeError(f"{formatter!r} is not callable")
         self._formatter_rv = formatter
@@ -163,22 +172,23 @@ class ReversibleFunction:
                 out._formatter_fw = _as_method(self._formatter_fw, obj)
                 out._formatter_rv = _as_method(self._formatter_rv, obj)
             out._map_args = self._map_args
+            out._merge_with = self._merge_with
         return out
 
     @classmethod
-    def merge(cls, cmds: Iterable[ReversibleFunction]) -> Self:
-        """Merge multiple commands into a single command."""
+    def merge(cls, rfuncs: Iterable[ReversibleFunction]) -> Self:
+        """Merge multiple reversible functions into a single command."""
         _fws = []
         _rvs = []
         _mgr = None
-        for cmd in cmds:
-            _fws.append(cmd._func_fw)
-            _rvs.append(cmd._func_rv)
+        for rf in rfuncs:
+            _fws.append(rf._func_fw)
+            _rvs.append(rf._func_rv)
             if _mgr is not None:
-                if _mgr is not cmd._mgr:
+                if _mgr is not rf._mgr:
                     raise ValueError("Commands must be from the same manager.")
             else:
-                _mgr = cmd._mgr
+                _mgr = rf._mgr
 
         def merged(arguments: list[tuple[tuple, dict[str, Any]]]):
             for _fw, (args, kwargs) in zip(_fws, arguments):
@@ -204,3 +214,7 @@ class ReversibleFunction:
 def _default_map_args(*args, **kwargs):
     """The default argument mapping."""
     return args, kwargs
+
+
+def _default_merge_with(*args, **kwargs):
+    return None

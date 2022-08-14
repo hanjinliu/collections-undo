@@ -1,7 +1,6 @@
 from __future__ import annotations
-from abc import ABC, abstractmethod, abstractproperty
+from abc import ABC, abstractmethod
 from typing import Any, Callable, Iterable, Iterator, TYPE_CHECKING
-from dataclasses import dataclass
 
 from ._reversible import ReversibleFunction
 
@@ -12,6 +11,8 @@ if TYPE_CHECKING:
 
 
 class _CommandBase(ABC):
+    size: int
+
     @abstractmethod
     def _call_with_callback(self):
         """Call the command and call the callback if it is defined."""
@@ -28,12 +29,7 @@ class _CommandBase(ABC):
     def format(self) -> str:
         """Format the command."""
 
-    @abstractproperty
-    def size(self) -> str:
-        """The size of the command."""
 
-
-@dataclass(repr=False)
 class Command(_CommandBase):
     """
     Undoable command object.
@@ -53,10 +49,17 @@ class Command(_CommandBase):
         should be removed from the stack.
     """
 
-    func: ReversibleFunction
-    args: tuple[Any, ...]
-    kwargs: dict[str, Any]
-    size: float = 0.0
+    def __init__(
+        self,
+        func: ReversibleFunction,
+        args: tuple[Any, ...],
+        kwargs: dict[str, Any],
+        size: float = 0.0,
+    ):
+        self.func = func
+        self.args = args
+        self.kwargs = kwargs
+        self.size = size
 
     def __repr__(self) -> str:
         _cls = type(self).__name__
@@ -70,6 +73,10 @@ class Command(_CommandBase):
 
     def _revert(self):
         return self.func._revert(*self.args, **self.kwargs)
+
+    @property
+    def function_id(self) -> int:
+        return self.func.function_id
 
     @classmethod
     def merge(cls, cmds: Iterable[Command], formatter=None) -> CommandGroup:
@@ -99,7 +106,7 @@ class CommandGroup(_CommandBase):
 
     def __init__(
         self,
-        commands: Iterable[Command],
+        commands: Iterable[_CommandBase],
         formatter: Callable[[Self], str] | None = None,
     ):
         self._commands = list(commands)
@@ -109,15 +116,25 @@ class CommandGroup(_CommandBase):
             self._formatter = formatter
 
     @property
-    def commands(self) -> list[Command]:
+    def commands(self) -> list[_CommandBase]:
         """List of commands."""
         return list(self._commands)
 
-    def __getitem__(self, index: int) -> Command:
+    def append(self, cmd: _CommandBase) -> None:
+        """Append a command to the group."""
+        if not isinstance(cmd, _CommandBase):
+            raise TypeError(f"{cmd} is not a command")
+        self._commands.append(cmd)
+
+    def pop(self) -> _CommandBase:
+        """Pop the last command."""
+        return self._commands.pop()
+
+    def __getitem__(self, index: int) -> _CommandBase:
         """Get the command at the given index."""
         return self._commands[index]
 
-    def __iter__(self) -> Iterator[Command]:
+    def __iter__(self) -> Iterator[_CommandBase]:
         """Iterate over all the commands."""
         return iter(self._commands)
 
