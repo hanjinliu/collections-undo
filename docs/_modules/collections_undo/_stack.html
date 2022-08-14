@@ -1,0 +1,507 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>collections_undo._stack &mdash; collectionsundo 0.0.5.dev0 documentation</title>
+      <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
+      <link rel="stylesheet" href="../../_static/css/theme.css" type="text/css" />
+  <!--[if lt IE 9]>
+    <script src="../../_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+
+        <script data-url_root="../../" id="documentation_options" src="../../_static/documentation_options.js"></script>
+        <script src="../../_static/jquery.js"></script>
+        <script src="../../_static/underscore.js"></script>
+        <script src="../../_static/doctools.js"></script>
+    <script src="../../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" />
+</head>
+
+<body class="wy-body-for-nav">
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+            <a href="../../index.html" class="icon icon-home"> collectionsundo
+          </a>
+              <div class="version">
+                0.0.5.dev0
+              </div>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul>
+<li class="toctree-l1"><a class="reference internal" href="../../main/reversible.html">Forward-reverse Framework</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../main/interface.html">Server-receiver Framework</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../main/property.html">Property-like Framework</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../main/undoable_list.html">List</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../main/undoable_dict.html">Dictionary</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../main/undoable_set.html">Set</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../index.html">collectionsundo</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../../index.html" class="icon icon-home"></a> &raquo;</li>
+          <li><a href="../index.html">Module code</a> &raquo;</li>
+      <li>collections_undo._stack</li>
+      <li class="wy-breadcrumbs-aside">
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+
+  <h1>Source code for collections_undo._stack</h1><div class="highlight"><pre>
+<span></span><span class="kn">from</span> <span class="nn">__future__</span> <span class="kn">import</span> <span class="n">annotations</span>
+<span class="kn">from</span> <span class="nn">contextlib</span> <span class="kn">import</span> <span class="n">contextmanager</span>
+<span class="kn">from</span> <span class="nn">enum</span> <span class="kn">import</span> <span class="n">Enum</span>
+<span class="kn">from</span> <span class="nn">typing</span> <span class="kn">import</span> <span class="p">(</span>
+    <span class="n">Any</span><span class="p">,</span>
+    <span class="n">Callable</span><span class="p">,</span>
+    <span class="n">Iterator</span><span class="p">,</span>
+    <span class="n">Literal</span><span class="p">,</span>
+    <span class="n">MutableSequence</span><span class="p">,</span>
+    <span class="n">NamedTuple</span><span class="p">,</span>
+    <span class="n">TYPE_CHECKING</span><span class="p">,</span>
+    <span class="n">TypeVar</span><span class="p">,</span>
+    <span class="n">overload</span><span class="p">,</span>
+<span class="p">)</span>
+<span class="kn">from</span> <span class="nn">functools</span> <span class="kn">import</span> <span class="n">wraps</span>
+
+<span class="kn">from</span> <span class="nn">._reversible</span> <span class="kn">import</span> <span class="n">ReversibleFunction</span>
+<span class="kn">from</span> <span class="nn">._undoable</span> <span class="kn">import</span> <span class="n">UndoableInterface</span><span class="p">,</span> <span class="n">UndoableProperty</span>
+<span class="kn">from</span> <span class="nn">._command</span> <span class="kn">import</span> <span class="n">Command</span><span class="p">,</span> <span class="n">_CommandBase</span>
+<span class="kn">from</span> <span class="nn">._const</span> <span class="kn">import</span> <span class="n">empty</span>
+
+<span class="k">if</span> <span class="n">TYPE_CHECKING</span><span class="p">:</span>
+    <span class="kn">from</span> <span class="nn">typing_extensions</span> <span class="kn">import</span> <span class="n">Self</span>
+
+<span class="n">_F</span> <span class="o">=</span> <span class="n">TypeVar</span><span class="p">(</span><span class="s2">&quot;_F&quot;</span><span class="p">,</span> <span class="n">bound</span><span class="o">=</span><span class="n">Callable</span><span class="p">)</span>
+
+
+<span class="k">class</span> <span class="nc">CallbackList</span><span class="p">(</span><span class="n">MutableSequence</span><span class="p">[</span><span class="n">_F</span><span class="p">]):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    A list of callbacks of UndoManager updates.</span>
+
+<span class="sd">    Callbacks are useful for such as logging.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_list</span> <span class="o">=</span> <span class="p">[]</span>
+
+    <span class="k">def</span> <span class="nf">insert</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">index</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span> <span class="n">callback</span><span class="p">:</span> <span class="n">_F</span><span class="p">,</span> <span class="o">/</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_check_callable</span><span class="p">(</span><span class="n">callback</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_list</span><span class="o">.</span><span class="n">insert</span><span class="p">(</span><span class="n">index</span><span class="p">,</span> <span class="n">callback</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="fm">__repr__</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+        <span class="k">return</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="nb">type</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="vm">__name__</span><span class="si">}</span><span class="s2">(</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">_list</span><span class="si">!r}</span><span class="s2">)&quot;</span>
+
+    <span class="k">def</span> <span class="fm">__len__</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
+        <span class="k">return</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_list</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="fm">__iter__</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Iterator</span><span class="p">[</span><span class="n">_F</span><span class="p">]:</span>
+        <span class="k">return</span> <span class="nb">iter</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_list</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="fm">__getitem__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">key</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_list</span><span class="p">[</span><span class="n">key</span><span class="p">]</span>
+
+    <span class="k">def</span> <span class="fm">__setitem__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">key</span><span class="p">,</span> <span class="n">callback</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_check_callable</span><span class="p">(</span><span class="n">callback</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_list</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">=</span> <span class="n">callback</span>
+
+    <span class="k">def</span> <span class="fm">__delitem__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">key</span><span class="p">):</span>
+        <span class="k">del</span> <span class="bp">self</span><span class="o">.</span><span class="n">_list</span><span class="p">[</span><span class="n">key</span><span class="p">]</span>
+
+    <span class="k">def</span> <span class="nf">evoke</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="sd">&quot;&quot;&quot;Evoce all callbacks.&quot;&quot;&quot;</span>
+        <span class="k">for</span> <span class="n">callback</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_list</span><span class="p">:</span>
+            <span class="n">callback</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+        <span class="k">return</span> <span class="kc">None</span>
+
+    <span class="nd">@staticmethod</span>
+    <span class="k">def</span> <span class="nf">_check_callable</span><span class="p">(</span><span class="n">obj</span><span class="p">):</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">callable</span><span class="p">(</span><span class="n">obj</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="s2">&quot;Can only insert callable object to the callback list.&quot;</span><span class="p">)</span>
+
+
+<span class="k">class</span> <span class="nc">CallType</span><span class="p">(</span><span class="n">Enum</span><span class="p">):</span>
+    <span class="n">call</span> <span class="o">=</span> <span class="s2">&quot;call&quot;</span>
+    <span class="n">undo</span> <span class="o">=</span> <span class="s2">&quot;undo&quot;</span>
+    <span class="n">redo</span> <span class="o">=</span> <span class="s2">&quot;redo&quot;</span>
+
+    <span class="k">def</span> <span class="fm">__eq__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">other</span><span class="p">):</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">other</span><span class="p">,</span> <span class="nb">str</span><span class="p">):</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">value</span> <span class="o">==</span> <span class="n">other</span>
+        <span class="k">return</span> <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__eq__</span><span class="p">(</span><span class="n">other</span><span class="p">)</span>
+
+
+<span class="k">class</span> <span class="nc">LengthPair</span><span class="p">(</span><span class="n">NamedTuple</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Pair of stack size.&quot;&quot;&quot;</span>
+
+    <span class="n">undo</span><span class="p">:</span> <span class="nb">int</span>
+    <span class="n">redo</span><span class="p">:</span> <span class="nb">int</span>
+
+
+<span class="k">def</span> <span class="nf">always_zero</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">float</span><span class="p">:</span>
+    <span class="sd">&quot;&quot;&quot;Default command size counter.&quot;&quot;&quot;</span>
+    <span class="k">return</span> <span class="mf">0.0</span>
+
+
+<span class="k">class</span> <span class="nc">ManagerState</span><span class="p">:</span>
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">measure</span><span class="p">:</span> <span class="n">Callable</span><span class="p">[</span><span class="o">...</span><span class="p">,</span> <span class="nb">float</span><span class="p">],</span>
+        <span class="n">maxsize</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">measure</span> <span class="o">=</span> <span class="n">measure</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">maxsize</span> <span class="o">=</span> <span class="n">maxsize</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">is_blocked</span> <span class="o">=</span> <span class="kc">False</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">stack_undo</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="n">_CommandBase</span><span class="p">]</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">stack_redo</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="n">_CommandBase</span><span class="p">]</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">stack_undo_size</span> <span class="o">=</span> <span class="mf">0.0</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">stack_redo_size</span> <span class="o">=</span> <span class="mf">0.0</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">called_callbacks</span><span class="p">:</span> <span class="n">CallbackList</span><span class="p">[</span>
+            <span class="n">Callable</span><span class="p">[[</span><span class="n">_CommandBase</span><span class="p">,</span> <span class="n">CallType</span><span class="p">],</span> <span class="n">Any</span><span class="p">]</span>
+        <span class="p">]</span> <span class="o">=</span> <span class="n">CallbackList</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">errored_callbacks</span><span class="p">:</span> <span class="n">CallbackList</span><span class="p">[</span>
+            <span class="n">Callable</span><span class="p">[[</span><span class="n">_CommandBase</span><span class="p">,</span> <span class="ne">Exception</span><span class="p">],</span> <span class="n">Any</span><span class="p">]</span>
+        <span class="p">]</span> <span class="o">=</span> <span class="n">CallbackList</span><span class="p">()</span>
+
+
+<div class="viewcode-block" id="UndoManager"><a class="viewcode-back" href="../../apidoc/collections_undo.html#collections_undo.UndoManager">[docs]</a><span class="k">class</span> <span class="nc">UndoManager</span><span class="p">:</span>
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="o">*</span><span class="p">,</span>
+        <span class="n">measure</span><span class="p">:</span> <span class="n">Callable</span><span class="p">[</span><span class="o">...</span><span class="p">,</span> <span class="nb">float</span><span class="p">]</span> <span class="o">=</span> <span class="n">always_zero</span><span class="p">,</span>
+        <span class="n">maxsize</span><span class="p">:</span> <span class="nb">float</span> <span class="o">|</span> <span class="n">Literal</span><span class="p">[</span><span class="s2">&quot;inf&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="s2">&quot;inf&quot;</span><span class="p">,</span>
+    <span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_instances</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="n">Self</span><span class="p">]</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">callable</span><span class="p">(</span><span class="n">measure</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="s2">&quot;measure must be callable&quot;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_state</span> <span class="o">=</span> <span class="n">ManagerState</span><span class="p">(</span><span class="n">measure</span><span class="p">,</span> <span class="nb">float</span><span class="p">(</span><span class="n">maxsize</span><span class="p">))</span>
+
+    <span class="k">def</span> <span class="fm">__repr__</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+        <span class="n">cls_name</span> <span class="o">=</span> <span class="nb">type</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="vm">__name__</span>
+        <span class="n">s_undo</span> <span class="o">=</span> <span class="n">_join_stack</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_state</span><span class="o">.</span><span class="n">stack_undo</span><span class="p">)</span>
+        <span class="n">s_redo</span> <span class="o">=</span> <span class="n">_join_stack</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_state</span><span class="o">.</span><span class="n">stack_redo</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">s_undo</span><span class="p">:</span>
+            <span class="n">s_undo</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;[</span><span class="se">\n</span><span class="s2">    </span><span class="si">{</span><span class="n">s_undo</span><span class="si">}</span><span class="se">\n</span><span class="s2">  ]&quot;</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">s_undo</span> <span class="o">=</span> <span class="s2">&quot;[]&quot;</span>
+        <span class="k">if</span> <span class="n">s_redo</span><span class="p">:</span>
+            <span class="n">s_redo</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;[</span><span class="se">\n</span><span class="s2">    </span><span class="si">{</span><span class="n">s_redo</span><span class="si">}</span><span class="se">\n</span><span class="s2">  ]&quot;</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">s_redo</span> <span class="o">=</span> <span class="s2">&quot;[]&quot;</span>
+        <span class="k">return</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">cls_name</span><span class="si">}</span><span class="s2">(</span><span class="se">\n</span><span class="s2">  undo=</span><span class="si">{</span><span class="n">s_undo</span><span class="si">}</span><span class="s2">,</span><span class="se">\n</span><span class="s2">  redo=</span><span class="si">{</span><span class="n">s_redo</span><span class="si">}</span><span class="se">\n</span><span class="s2">)&quot;</span>
+
+    <span class="k">def</span> <span class="fm">__get__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">obj</span><span class="p">,</span> <span class="n">objtype</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Self</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">obj</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">return</span> <span class="bp">self</span>
+        <span class="n">_id</span> <span class="o">=</span> <span class="nb">id</span><span class="p">(</span><span class="n">obj</span><span class="p">)</span>
+        <span class="k">if</span> <span class="p">(</span><span class="n">stack</span> <span class="o">:=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_instances</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">_id</span><span class="p">,</span> <span class="kc">None</span><span class="p">))</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_instances</span><span class="p">[</span><span class="n">_id</span><span class="p">]</span> <span class="o">=</span> <span class="n">stack</span> <span class="o">=</span> <span class="nb">type</span><span class="p">(</span><span class="bp">self</span><span class="p">)()</span>
+        <span class="k">return</span> <span class="n">stack</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">is_blocked</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
+        <span class="sd">&quot;&quot;&quot;True if manager is blocked.&quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_state</span><span class="o">.</span><span class="n">is_blocked</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">called</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">CallbackList</span><span class="p">[</span><span class="n">Callable</span><span class="p">[[</span><span class="n">_CommandBase</span><span class="p">,</span> <span class="n">CallType</span><span class="p">],</span> <span class="n">Any</span><span class="p">]]:</span>
+        <span class="sd">&quot;&quot;&quot;Callback list for called events.&quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_state</span><span class="o">.</span><span class="n">called_callbacks</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">errored</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">CallbackList</span><span class="p">[</span><span class="n">Callable</span><span class="p">[[</span><span class="n">_CommandBase</span><span class="p">,</span> <span class="ne">Exception</span><span class="p">],</span> <span class="n">Any</span><span class="p">]]:</span>
+        <span class="sd">&quot;&quot;&quot;Callback list for errored events.&quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_state</span><span class="o">.</span><span class="n">errored_callbacks</span>
+
+<div class="viewcode-block" id="UndoManager.undo"><a class="viewcode-back" href="../../apidoc/collections_undo.html#collections_undo.UndoManager.undo">[docs]</a>    <span class="k">def</span> <span class="nf">undo</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Any</span><span class="p">:</span>
+        <span class="sd">&quot;&quot;&quot;Undo last command and update undo/redo stacks.&quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_state</span><span class="o">.</span><span class="n">stack_undo</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">empty</span>
+        <span class="n">cmd</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_state</span><span class="o">.</span><span class="n">stack_undo</span><span class="o">.</span><span class="n">pop</span><span class="p">()</span>
+        <span class="n">out</span> <span class="o">=</span> <span class="n">cmd</span><span class="o">.</span><span class="n">_revert</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_state</span><span class="o">.</span><span class="n">stack_redo</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">cmd</span><span class="p">)</span>
+
+        <span class="c1"># update size</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_state</span><span class="o">.</span><span class="n">stack_undo_size</span> <span class="o">-=</span> <span class="n">cmd</span><span class="o">.</span><span class="n">size</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_state</span><span class="o">.</span><span class="n">stack_redo_size</span> <span class="o">+=</span> <span class="n">cmd</span><span class="o">.</span><span class="n">size</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">called</span><span class="o">.</span><span class="n">evoke</span><span class="p">(</span><span class="n">cmd</span><span class="p">,</span> <span class="n">CallType</span><span class="o">.</span><span class="n">undo</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">out</span></div>
+
+<div class="viewcode-block" id="UndoManager.redo"><a class="viewcode-back" href="../../apidoc/collections_undo.html#collections_undo.UndoManager.redo">[docs]</a>    <span class="k">def</span> <span class="nf">redo</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Any</span><span class="p">:</span>
+        <span class="sd">&quot;&quot;&quot;Redo last command and update undo/redo stacks.&quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_state</span><span class="o">.</span><span class="n">stack_redo</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">empty</span>
+        <span class="n">cmd</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_state</span><span class="o">.</span><span class="n">stack_redo</span><span class="o">.</span><span class="n">pop</span><span class="p">()</span>
+        <span class="n">out</span> <span class="o">=</span> <span class="n">cmd</span><span class="o">.</span><span class="n">_call_raw</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_state</span><span class="o">.</span><span class="n">stack_undo</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">cmd</span><span class="p">)</span>
+
+        <span class="c1"># update size</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_state</span><span class="o">.</span><span class="n">stack_undo_size</span> <span class="o">+=</span> <span class="n">cmd</span><span class="o">.</span><span class="n">size</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_state</span><span class="o">.</span><span class="n">stack_redo_size</span> <span class="o">-=</span> <span class="n">cmd</span><span class="o">.</span><span class="n">size</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">called</span><span class="o">.</span><span class="n">evoke</span><span class="p">(</span><span class="n">cmd</span><span class="p">,</span> <span class="n">CallType</span><span class="o">.</span><span class="n">redo</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">out</span></div>
+
+<div class="viewcode-block" id="UndoManager.link"><a class="viewcode-back" href="../../apidoc/collections_undo.html#collections_undo.UndoManager.link">[docs]</a>    <span class="k">def</span> <span class="nf">link</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">other</span><span class="p">:</span> <span class="n">Self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">other</span><span class="p">,</span> <span class="n">UndoManager</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Cannot link </span><span class="si">{</span><span class="n">other</span><span class="si">!r}</span><span class="s2">.&quot;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">empty</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_state</span> <span class="o">=</span> <span class="n">other</span><span class="o">.</span><span class="n">_state</span>
+        <span class="k">elif</span> <span class="n">other</span><span class="o">.</span><span class="n">empty</span><span class="p">:</span>
+            <span class="n">other</span><span class="o">.</span><span class="n">link</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Either UndoManager must be empty.&quot;</span><span class="p">)</span>
+        <span class="k">return</span> <span class="kc">None</span></div>
+
+    <span class="c1"># def run_all(self) -&gt; Any:</span>
+    <span class="c1">#     &quot;&quot;&quot;Run all the command.&quot;&quot;&quot;</span>
+    <span class="c1">#     for cmd in self._state.stack_undo:</span>
+    <span class="c1">#         out = cmd.func._call_raw(*cmd.args, **cmd.kwargs)</span>
+    <span class="c1">#     self._state.stack_redo = self._state.stack_undo.copy()</span>
+    <span class="c1">#     self._state.stack_redo.reverse()</span>
+    <span class="c1">#     return out</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">stack_undo</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="n">_CommandBase</span><span class="p">]:</span>
+        <span class="sd">&quot;&quot;&quot;List of undo stack.&quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="nb">list</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_state</span><span class="o">.</span><span class="n">stack_undo</span><span class="p">)</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">stack_redo</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="n">_CommandBase</span><span class="p">]:</span>
+        <span class="sd">&quot;&quot;&quot;List of redo stack.&quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="nb">list</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_state</span><span class="o">.</span><span class="n">stack_redo</span><span class="p">)</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">stack_lengths</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">LengthPair</span><span class="p">:</span>
+        <span class="sd">&quot;&quot;&quot;Return length of undo and redo stack&quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="n">LengthPair</span><span class="p">(</span>
+            <span class="n">undo</span><span class="o">=</span><span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_state</span><span class="o">.</span><span class="n">stack_undo</span><span class="p">),</span>
+            <span class="n">redo</span><span class="o">=</span><span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_state</span><span class="o">.</span><span class="n">stack_redo</span><span class="p">),</span>
+        <span class="p">)</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">stack_size</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">float</span><span class="p">:</span>
+        <span class="sd">&quot;&quot;&quot;Return size of undo and redo stack&quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_state</span><span class="o">.</span><span class="n">stack_undo_size</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">_state</span><span class="o">.</span><span class="n">stack_redo_size</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">empty</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
+        <span class="sd">&quot;&quot;&quot;True if stack is empty.&quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_state</span><span class="o">.</span><span class="n">stack_undo</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span> <span class="ow">and</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_state</span><span class="o">.</span><span class="n">stack_redo</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span>
+
+<div class="viewcode-block" id="UndoManager.append"><a class="viewcode-back" href="../../apidoc/collections_undo.html#collections_undo.UndoManager.append">[docs]</a>    <span class="k">def</span> <span class="nf">append</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">cmd</span><span class="p">:</span> <span class="n">_CommandBase</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="sd">&quot;&quot;&quot;Append new command to the undo stack.&quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">is_blocked</span><span class="p">:</span>
+            <span class="k">return</span> <span class="kc">None</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">_state</span><span class="o">.</span><span class="n">stack_undo</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">cmd</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_state</span><span class="o">.</span><span class="n">stack_redo</span><span class="o">.</span><span class="n">clear</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">called</span><span class="o">.</span><span class="n">evoke</span><span class="p">(</span><span class="n">cmd</span><span class="p">,</span> <span class="n">CallType</span><span class="o">.</span><span class="n">call</span><span class="p">)</span>
+
+        <span class="c1"># update size</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_state</span><span class="o">.</span><span class="n">stack_undo_size</span> <span class="o">+=</span> <span class="n">cmd</span><span class="o">.</span><span class="n">size</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_state</span><span class="o">.</span><span class="n">stack_redo_size</span> <span class="o">=</span> <span class="mf">0.0</span>
+
+        <span class="c1"># pop items until size is less than maxsize</span>
+        <span class="k">while</span> <span class="bp">self</span><span class="o">.</span><span class="n">_state</span><span class="o">.</span><span class="n">stack_undo_size</span> <span class="o">&gt;</span> <span class="bp">self</span><span class="o">.</span><span class="n">_state</span><span class="o">.</span><span class="n">maxsize</span><span class="p">:</span>
+            <span class="n">cmd</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_state</span><span class="o">.</span><span class="n">stack_undo</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_state</span><span class="o">.</span><span class="n">stack_undo_size</span> <span class="o">-=</span> <span class="n">cmd</span><span class="o">.</span><span class="n">size</span>
+        <span class="k">return</span> <span class="kc">None</span></div>
+
+    <span class="k">def</span> <span class="nf">_append_command</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">cmd</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="n">cmd</span> <span class="o">=</span> <span class="n">Command</span><span class="p">(</span><span class="n">func</span><span class="o">=</span><span class="n">cmd</span><span class="p">,</span> <span class="n">args</span><span class="o">=</span><span class="n">args</span><span class="p">,</span> <span class="n">kwargs</span><span class="o">=</span><span class="n">kwargs</span><span class="p">)</span>
+        <span class="n">cmd</span><span class="o">.</span><span class="n">size</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_state</span><span class="o">.</span><span class="n">measure</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">cmd</span><span class="p">)</span>
+
+<div class="viewcode-block" id="UndoManager.clear"><a class="viewcode-back" href="../../apidoc/collections_undo.html#collections_undo.UndoManager.clear">[docs]</a>    <span class="k">def</span> <span class="nf">clear</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="sd">&quot;&quot;&quot;Clear the stack.&quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_state</span><span class="o">.</span><span class="n">stack_undo</span><span class="o">.</span><span class="n">clear</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_state</span><span class="o">.</span><span class="n">stack_redo</span><span class="o">.</span><span class="n">clear</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_state</span><span class="o">.</span><span class="n">stack_undo_size</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_state</span><span class="o">.</span><span class="n">stack_redo_size</span> <span class="o">=</span> <span class="mf">0.0</span>
+        <span class="k">return</span> <span class="kc">None</span></div>
+
+    <span class="nd">@overload</span>
+    <span class="k">def</span> <span class="nf">undoable</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">f</span><span class="p">:</span> <span class="n">Callable</span><span class="p">,</span> <span class="n">name</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">ReversibleFunction</span><span class="p">:</span>
+        <span class="o">...</span>
+
+    <span class="nd">@overload</span>
+    <span class="k">def</span> <span class="nf">undoable</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">f</span><span class="p">:</span> <span class="nb">property</span><span class="p">,</span> <span class="n">name</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">UndoableProperty</span><span class="p">:</span>
+        <span class="o">...</span>
+
+    <span class="nd">@overload</span>
+    <span class="k">def</span> <span class="nf">undoable</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">f</span><span class="p">:</span> <span class="n">Literal</span><span class="p">[</span><span class="kc">None</span><span class="p">],</span>
+        <span class="n">name</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Callable</span><span class="p">[[</span><span class="n">Callable</span><span class="p">],</span> <span class="n">ReversibleFunction</span><span class="p">]</span> <span class="o">|</span> <span class="n">Callable</span><span class="p">[</span>
+        <span class="p">[</span><span class="nb">property</span><span class="p">],</span> <span class="n">UndoableProperty</span>
+    <span class="p">]:</span>
+        <span class="o">...</span>
+
+<div class="viewcode-block" id="UndoManager.undoable"><a class="viewcode-back" href="../../apidoc/collections_undo.html#collections_undo.UndoManager.undoable">[docs]</a>    <span class="k">def</span> <span class="nf">undoable</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">f</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Decorator for undoable object construction.&quot;&quot;&quot;</span>
+
+        <span class="k">def</span> <span class="nf">_wrapper</span><span class="p">(</span><span class="n">f</span><span class="p">):</span>
+            <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">f</span><span class="p">,</span> <span class="nb">property</span><span class="p">):</span>
+                <span class="k">return</span> <span class="n">UndoableProperty</span><span class="o">.</span><span class="n">from_property</span><span class="p">(</span><span class="n">f</span><span class="p">,</span> <span class="n">mgr</span><span class="o">=</span><span class="bp">self</span><span class="p">)</span>
+            <span class="n">fn</span> <span class="o">=</span> <span class="n">ReversibleFunction</span><span class="p">(</span><span class="n">f</span><span class="p">,</span> <span class="n">mgr</span><span class="o">=</span><span class="bp">self</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">name</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="n">fn</span><span class="o">.</span><span class="vm">__name__</span> <span class="o">=</span> <span class="n">name</span>
+            <span class="k">return</span> <span class="n">fn</span>
+
+        <span class="k">return</span> <span class="n">_wrapper</span> <span class="k">if</span> <span class="n">f</span> <span class="ow">is</span> <span class="kc">None</span> <span class="k">else</span> <span class="n">_wrapper</span><span class="p">(</span><span class="n">f</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="UndoManager.property"><a class="viewcode-back" href="../../apidoc/collections_undo.html#collections_undo.UndoManager.property">[docs]</a>    <span class="k">def</span> <span class="nf">property</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">fget</span><span class="p">:</span> <span class="n">Callable</span><span class="p">[[</span><span class="n">Any</span><span class="p">],</span> <span class="n">Any</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">fset</span><span class="p">:</span> <span class="n">Callable</span><span class="p">[[</span><span class="n">Any</span><span class="p">,</span> <span class="n">Any</span><span class="p">],</span> <span class="kc">None</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">fdel</span><span class="p">:</span> <span class="n">Callable</span><span class="p">[[</span><span class="n">Any</span><span class="p">],</span> <span class="kc">None</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">doc</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">UndoableProperty</span><span class="p">:</span>
+        <span class="sd">&quot;&quot;&quot;Decorator for undoable property construction.&quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="n">UndoableProperty</span><span class="p">(</span><span class="n">fget</span><span class="p">,</span> <span class="n">fset</span><span class="p">,</span> <span class="n">fdel</span><span class="p">,</span> <span class="n">doc</span><span class="o">=</span><span class="n">doc</span><span class="p">,</span> <span class="n">mgr</span><span class="o">=</span><span class="bp">self</span><span class="p">)</span></div>
+
+    <span class="nd">@overload</span>
+    <span class="k">def</span> <span class="nf">interface</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">func</span><span class="p">:</span> <span class="n">Callable</span><span class="p">,</span> <span class="n">name</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">UndoableInterface</span><span class="p">:</span>
+        <span class="o">...</span>
+
+    <span class="nd">@overload</span>
+    <span class="k">def</span> <span class="nf">interface</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">func</span><span class="p">:</span> <span class="n">Literal</span><span class="p">[</span><span class="kc">None</span><span class="p">],</span>
+        <span class="n">name</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Callable</span><span class="p">[[</span><span class="n">Callable</span><span class="p">],</span> <span class="n">UndoableInterface</span><span class="p">]:</span>
+        <span class="o">...</span>
+
+<div class="viewcode-block" id="UndoManager.interface"><a class="viewcode-back" href="../../apidoc/collections_undo.html#collections_undo.UndoManager.interface">[docs]</a>    <span class="k">def</span> <span class="nf">interface</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">func</span><span class="p">:</span> <span class="n">Callable</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">name</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">UndoableInterface</span><span class="p">:</span>
+        <span class="sd">&quot;&quot;&quot;Decorator for undoable setter function construction.&quot;&quot;&quot;</span>
+
+        <span class="k">def</span> <span class="nf">_wrapper</span><span class="p">(</span><span class="n">f</span><span class="p">):</span>
+            <span class="n">itf</span> <span class="o">=</span> <span class="n">UndoableInterface</span><span class="p">(</span><span class="n">f</span><span class="p">,</span> <span class="n">mgr</span><span class="o">=</span><span class="bp">self</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">name</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="n">itf</span><span class="o">.</span><span class="vm">__name__</span> <span class="o">=</span> <span class="n">name</span>
+            <span class="k">return</span> <span class="n">itf</span>
+
+        <span class="k">return</span> <span class="n">_wrapper</span> <span class="k">if</span> <span class="n">func</span> <span class="ow">is</span> <span class="kc">None</span> <span class="k">else</span> <span class="n">_wrapper</span><span class="p">(</span><span class="n">func</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="UndoManager.undef"><a class="viewcode-back" href="../../apidoc/collections_undo.html#collections_undo.UndoManager.undef">[docs]</a>    <span class="k">def</span> <span class="nf">undef</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">undef</span><span class="p">:</span> <span class="n">_F</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">_F</span><span class="p">:</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Mark an function as an undo-undefined function.</span>
+
+<span class="sd">        When marked function is called, undo/redo stack get cleared.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="nd">@wraps</span><span class="p">(</span><span class="n">undef</span><span class="p">)</span>
+        <span class="k">def</span> <span class="nf">_undef</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">clear</span><span class="p">()</span>
+            <span class="k">return</span> <span class="n">undef</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="n">_undef</span></div>
+
+<div class="viewcode-block" id="UndoManager.merge_commands"><a class="viewcode-back" href="../../apidoc/collections_undo.html#collections_undo.UndoManager.merge_commands">[docs]</a>    <span class="k">def</span> <span class="nf">merge_commands</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span> <span class="n">start</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span> <span class="n">stop</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span> <span class="n">formatter</span><span class="p">:</span> <span class="n">Callable</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="sd">&quot;&quot;&quot;Merge a command set into the undo stack.&quot;&quot;&quot;</span>
+        <span class="n">merged</span> <span class="o">=</span> <span class="n">Command</span><span class="o">.</span><span class="n">merge</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_state</span><span class="o">.</span><span class="n">stack_undo</span><span class="p">[</span><span class="n">start</span><span class="p">:</span><span class="n">stop</span><span class="p">],</span> <span class="n">formatter</span><span class="o">=</span><span class="n">formatter</span><span class="p">)</span>
+        <span class="k">del</span> <span class="bp">self</span><span class="o">.</span><span class="n">_state</span><span class="o">.</span><span class="n">stack_undo</span><span class="p">[</span><span class="n">start</span><span class="p">:</span><span class="n">stop</span><span class="p">]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_state</span><span class="o">.</span><span class="n">stack_undo</span><span class="o">.</span><span class="n">insert</span><span class="p">(</span><span class="n">start</span><span class="p">,</span> <span class="n">merged</span><span class="p">)</span>
+        <span class="k">return</span> <span class="kc">None</span></div>
+
+<div class="viewcode-block" id="UndoManager.merging"><a class="viewcode-back" href="../../apidoc/collections_undo.html#collections_undo.UndoManager.merging">[docs]</a>    <span class="nd">@contextmanager</span>
+    <span class="k">def</span> <span class="nf">merging</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">formatter</span><span class="p">:</span> <span class="n">Callable</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="sd">&quot;&quot;&quot;Merge all the commands into a single command in this context.&quot;&quot;&quot;</span>
+        <span class="n">blocked</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_state</span><span class="o">.</span><span class="n">is_blocked</span>
+        <span class="n">len_before</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_state</span><span class="o">.</span><span class="n">stack_undo</span><span class="p">)</span>
+        <span class="k">yield</span> <span class="kc">None</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">blocked</span><span class="p">:</span>
+            <span class="n">len_after</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_state</span><span class="o">.</span><span class="n">stack_undo</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">merge_commands</span><span class="p">(</span><span class="n">len_before</span><span class="p">,</span> <span class="n">len_after</span><span class="p">,</span> <span class="n">formatter</span><span class="o">=</span><span class="n">formatter</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">called</span><span class="o">.</span><span class="n">evoke</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_state</span><span class="o">.</span><span class="n">stack_undo</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">],</span> <span class="n">CallType</span><span class="o">.</span><span class="n">call</span><span class="p">)</span>
+        <span class="k">return</span> <span class="kc">None</span></div>
+
+<div class="viewcode-block" id="UndoManager.blocked"><a class="viewcode-back" href="../../apidoc/collections_undo.html#collections_undo.UndoManager.blocked">[docs]</a>    <span class="nd">@contextmanager</span>
+    <span class="k">def</span> <span class="nf">blocked</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Block new command from being appended to the stack.&quot;&quot;&quot;</span>
+        <span class="n">blocked</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_state</span><span class="o">.</span><span class="n">is_blocked</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_state</span><span class="o">.</span><span class="n">is_blocked</span> <span class="o">=</span> <span class="kc">True</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="k">yield</span> <span class="kc">None</span>
+        <span class="k">finally</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_state</span><span class="o">.</span><span class="n">is_blocked</span> <span class="o">=</span> <span class="n">blocked</span>
+        <span class="k">return</span> <span class="kc">None</span></div>
+
+<div class="viewcode-block" id="UndoManager.catch_errors"><a class="viewcode-back" href="../../apidoc/collections_undo.html#collections_undo.UndoManager.catch_errors">[docs]</a>    <span class="nd">@contextmanager</span>
+    <span class="k">def</span> <span class="nf">catch_errors</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Catch all the errors in this context and evoke callbacks.&quot;&quot;&quot;</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="k">yield</span> <span class="kc">None</span>
+        <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">errored</span><span class="o">.</span><span class="n">evoke</span><span class="p">(</span><span class="n">e</span><span class="p">)</span>
+            <span class="k">raise</span> <span class="n">e</span></div></div>
+
+
+<span class="k">def</span> <span class="nf">_join_stack</span><span class="p">(</span><span class="n">stack</span><span class="p">:</span> <span class="nb">list</span><span class="p">,</span> <span class="nb">max</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">10</span><span class="p">):</span>
+    <span class="n">_splitter</span> <span class="o">=</span> <span class="s2">&quot;,</span><span class="se">\n</span><span class="s2">    &quot;</span>
+    <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">stack</span><span class="p">)</span> <span class="o">&gt;</span> <span class="nb">max</span><span class="p">:</span>
+        <span class="n">s</span> <span class="o">=</span> <span class="n">_splitter</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="nb">repr</span><span class="p">(</span><span class="n">cmd</span><span class="p">)</span> <span class="k">for</span> <span class="n">cmd</span> <span class="ow">in</span> <span class="n">stack</span><span class="p">[</span><span class="o">-</span><span class="nb">max</span><span class="p">:])</span>
+        <span class="k">return</span> <span class="n">_splitter</span><span class="o">.</span><span class="n">join</span><span class="p">([</span><span class="s2">&quot;...&quot;</span><span class="p">,</span> <span class="n">s</span><span class="p">])</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">_splitter</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="nb">repr</span><span class="p">(</span><span class="n">cmd</span><span class="p">)</span> <span class="k">for</span> <span class="n">cmd</span> <span class="ow">in</span> <span class="n">stack</span><span class="p">)</span>
+</pre></div>
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2022, Hanjin Liu.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script>
+
+</body>
+</html>

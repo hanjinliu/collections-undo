@@ -17,7 +17,7 @@ sys.path.insert(0, os.path.abspath('../'))
 
 # -- Project information -----------------------------------------------------
 
-project = 'collections-undo'
+project = 'collectionsundo'
 copyright = '2022, Hanjin Liu'
 author = 'Hanjin Liu'
 

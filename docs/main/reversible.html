@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+  <meta charset="utf-8" /><meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Forward-reverse Framework &mdash; collectionsundo 0.0.5.dev0 documentation</title>
+      <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+      <link rel="stylesheet" href="../_static/css/theme.css" type="text/css" />
+  <!--[if lt IE 9]>
+    <script src="../_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+
+        <script data-url_root="../" id="documentation_options" src="../_static/documentation_options.js"></script>
+        <script src="../_static/jquery.js"></script>
+        <script src="../_static/underscore.js"></script>
+        <script src="../_static/doctools.js"></script>
+    <script src="../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="Server-receiver Framework" href="interface.html" />
+    <link rel="prev" title="collections-undo" href="../index.html" />
+</head>
+
+<body class="wy-body-for-nav">
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+            <a href="../index.html" class="icon icon-home"> collectionsundo
+          </a>
+              <div class="version">
+                0.0.5.dev0
+              </div>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul class="current">
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Forward-reverse Framework</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#undo-implementation-for-a-custom-class">Undo implementation for a custom class</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="interface.html">Server-receiver Framework</a></li>
+<li class="toctree-l1"><a class="reference internal" href="property.html">Property-like Framework</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="undoable_list.html">List</a></li>
+<li class="toctree-l1"><a class="reference internal" href="undoable_dict.html">Dictionary</a></li>
+<li class="toctree-l1"><a class="reference internal" href="undoable_set.html">Set</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../index.html">collectionsundo</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../index.html" class="icon icon-home"></a> &raquo;</li>
+      <li>Forward-reverse Framework</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="../_sources/main/reversible.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+
+  <section id="forward-reverse-framework">
+<h1>Forward-reverse Framework<a class="headerlink" href="#forward-reverse-framework" title="Permalink to this headline">¶</a></h1>
+<p>The forward-reverse framework is the simplest way to implement undo.</p>
+<p>The “forward” function is the “do” operation. Any function can be considered as a
+forward function. The “reverse” function is a conjugative function to the forward
+one and carries out the opposite operation.</p>
+<p>When a <code class="docutils literal notranslate"><span class="pre">UndoManager</span></code> undoes a command, it passes all the arguments of forward
+call to the reverse function. For instance, if you called <code class="docutils literal notranslate"><span class="pre">f(10)</span></code> and the
+reverse function for <code class="docutils literal notranslate"><span class="pre">f</span></code> is <code class="docutils literal notranslate"><span class="pre">g</span></code>, then the undo operation will be <code class="docutils literal notranslate"><span class="pre">g(10)</span></code>.
+Thus, you have to make sure that calling reverse function after the forward
+function will restore the original state.</p>
+<p>Here’s a simple example. Defining a forward-reverse set is very similar to defining
+getter and setter of a Python <code class="docutils literal notranslate"><span class="pre">property</span></code>.</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">collections_undo</span> <span class="kn">import</span> <span class="n">UndoManager</span>
+
+<span class="n">mgr</span> <span class="o">=</span> <span class="n">UndoManager</span><span class="p">()</span>  <span class="c1"># prepare undo manager</span>
+
+<span class="nd">@mgr</span><span class="o">.</span><span class="n">undoable</span>  <span class="c1"># decorate any functions you want</span>
+<span class="k">def</span> <span class="nf">f</span><span class="p">(</span><span class="n">a</span><span class="p">):</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;do&quot;</span><span class="p">,</span> <span class="n">a</span><span class="p">)</span>
+
+<span class="nd">@f</span><span class="o">.</span><span class="n">undo_def</span>  <span class="c1"># define a reverse function</span>
+<span class="k">def</span> <span class="nf">f</span><span class="p">(</span><span class="n">a</span><span class="p">):</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;undo&quot;</span><span class="p">,</span> <span class="n">a</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>Function <code class="docutils literal notranslate"><span class="pre">f</span></code> can be used as usual. To undo or redo the action, call <code class="xref py py-meth docutils literal notranslate"><span class="pre">undo()</span></code>
+and <code class="xref py py-meth docutils literal notranslate"><span class="pre">redo()</span></code> from the <code class="xref py py-class docutils literal notranslate"><span class="pre">UndoManager</span></code> instance.</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">f</span><span class="p">(</span><span class="mi">10</span><span class="p">)</span>
+<span class="go">do 10</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">mgr</span><span class="o">.</span><span class="n">undo</span><span class="p">()</span>
+<span class="go">undo 10</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">mgr</span><span class="o">.</span><span class="n">undo</span><span class="p">()</span>  <span class="c1"># nothing happens</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">mgr</span><span class="o">.</span><span class="n">redo</span><span class="p">()</span>
+<span class="go">do 10</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">mgr</span><span class="o">.</span><span class="n">redo</span><span class="p">()</span>  <span class="c1"># nothing happens</span>
+</pre></div>
+</div>
+<section id="undo-implementation-for-a-custom-class">
+<h2>Undo implementation for a custom class<a class="headerlink" href="#undo-implementation-for-a-custom-class" title="Permalink to this headline">¶</a></h2>
+<p><code class="docutils literal notranslate"><span class="pre">UndoManager</span></code> can be used as a field-like object of a class. This is the best way
+to define object-specific undo managers.</p>
+<p>Following example shows how to make the attribute <code class="xref py py-attr docutils literal notranslate"><span class="pre">x</span></code> undoable.</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">collections_undo</span> <span class="kn">import</span> <span class="n">UndoManager</span>
+
+<span class="k">class</span> <span class="nc">A</span><span class="p">:</span>
+    <span class="n">mgr</span> <span class="o">=</span> <span class="n">UndoManager</span><span class="p">()</span>
+
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">x</span> <span class="o">=</span> <span class="mi">0</span>
+
+    <span class="k">def</span> <span class="nf">set_value</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">x</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_set_value</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">x</span><span class="p">)</span>
+
+    <span class="nd">@mgr</span><span class="o">.</span><span class="n">undoable</span>
+    <span class="k">def</span> <span class="nf">_set_value</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">x</span><span class="p">,</span> <span class="n">x_old</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">x</span> <span class="o">=</span> <span class="n">x</span>
+
+    <span class="nd">@_set_value</span><span class="o">.</span><span class="n">undo_def</span>
+    <span class="k">def</span> <span class="nf">_set_value</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">x</span><span class="p">,</span> <span class="n">x_old</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">x</span> <span class="o">=</span> <span class="n">x_old</span>
+</pre></div>
+</div>
+<p>Note that to set an attribute in an undoable way, you have to pass the old value to
+the forward function because it is needed for the reverse function.</p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>If you feel this is too complicated, it’s totally OK. That’s why <code class="docutils literal notranslate"><span class="pre">collections-undo</span></code>
+has other frameworks. See <a class="reference internal" href="interface.html"><span class="doc">Server-receiver Framework</span></a> and <a class="reference internal" href="property.html"><span class="doc">Property-like Framework</span></a> for the better way to
+do this.</p>
+</div>
+<p>Class <code class="xref py py-class docutils literal notranslate"><span class="pre">A</span></code> works like this.</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">a</span> <span class="o">=</span> <span class="n">A</span><span class="p">()</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">a</span><span class="o">.</span><span class="n">set_value</span><span class="p">(</span><span class="mi">10</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">a</span><span class="o">.</span><span class="n">x</span>
+<span class="go">10</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">a</span><span class="o">.</span><span class="n">mgr</span><span class="o">.</span><span class="n">undo</span><span class="p">()</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">a</span><span class="o">.</span><span class="n">x</span>
+<span class="go">0</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">a</span><span class="o">.</span><span class="n">mgr</span><span class="o">.</span><span class="n">redo</span><span class="p">()</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">a</span><span class="o">.</span><span class="n">x</span>
+<span class="go">10</span>
+</pre></div>
+</div>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="../index.html" class="btn btn-neutral float-left" title="collections-undo" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="interface.html" class="btn btn-neutral float-right" title="Server-receiver Framework" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2022, Hanjin Liu.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script>
+
+</body>
+</html>

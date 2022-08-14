@@ -1,0 +1,437 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+  <meta charset="utf-8" /><meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>collections_undo package &mdash; collectionsundo 0.0.5.dev0 documentation</title>
+      <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+      <link rel="stylesheet" href="../_static/css/theme.css" type="text/css" />
+  <!--[if lt IE 9]>
+    <script src="../_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+
+        <script data-url_root="../" id="documentation_options" src="../_static/documentation_options.js"></script>
+        <script src="../_static/jquery.js"></script>
+        <script src="../_static/underscore.js"></script>
+        <script src="../_static/doctools.js"></script>
+    <script src="../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+</head>
+
+<body class="wy-body-for-nav">
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+            <a href="../index.html" class="icon icon-home"> collectionsundo
+          </a>
+              <div class="version">
+                0.0.5.dev0
+              </div>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul>
+<li class="toctree-l1"><a class="reference internal" href="../main/reversible.html">Forward-reverse Framework</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../main/interface.html">Server-receiver Framework</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../main/property.html">Property-like Framework</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../main/undoable_list.html">List</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../main/undoable_dict.html">Dictionary</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../main/undoable_set.html">Set</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../index.html">collectionsundo</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../index.html" class="icon icon-home"></a> &raquo;</li>
+      <li>collections_undo package</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="../_sources/apidoc/collections_undo.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+
+  <section id="collections-undo-package">
+<h1>collections_undo package<a class="headerlink" href="#collections-undo-package" title="Permalink to this headline">¶</a></h1>
+<section id="submodules">
+<h2>Submodules<a class="headerlink" href="#submodules" title="Permalink to this headline">¶</a></h2>
+</section>
+<section id="module-collections_undo.abc">
+<span id="collections-undo-abc-module"></span><h2>collections_undo.abc module<a class="headerlink" href="#module-collections_undo.abc" title="Permalink to this headline">¶</a></h2>
+<dl class="py attribute">
+<dt class="sig sig-object py" id="collections_undo.abc.UndoableABC">
+<span class="sig-prename descclassname"><span class="pre">collections_undo.abc.</span></span><span class="sig-name descname"><span class="pre">UndoableABC</span></span><a class="reference internal" href="../_modules/collections_undo/abc.html#UndoableABC"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#collections_undo.abc.UndoableABC" title="Permalink to this definition">¶</a></dt>
+<dd><p>alias of <a class="reference internal" href="#collections_undo.abc.UndoableABC" title="collections_undo.abc.UndoableABC"><code class="xref py py-class docutils literal notranslate"><span class="pre">collections_undo.abc.UndoableABC</span></code></a></p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="collections_undo.abc.undo_def">
+<span class="sig-prename descclassname"><span class="pre">collections_undo.abc.</span></span><span class="sig-name descname"><span class="pre">undo_def</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">func_fw</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">collections_undo.abc._F</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Callable</span><span class="p"><span class="pre">[</span></span><span class="p"><span class="pre">[</span></span><span class="pre">Callable</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">,</span> </span><span class="pre">collections_undo.abc._F</span><span class="p"><span class="pre">]</span></span></span></span><a class="reference internal" href="../_modules/collections_undo/abc.html#undo_def"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#collections_undo.abc.undo_def" title="Permalink to this definition">¶</a></dt>
+<dd><p>Mark a function as the undo function of a already defined function.</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="collections_undo.abc.undoablemethod">
+<span class="sig-prename descclassname"><span class="pre">collections_undo.abc.</span></span><span class="sig-name descname"><span class="pre">undoablemethod</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">func</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">collections_undo.abc._F</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">collections_undo.abc._F</span></span></span><a class="reference internal" href="../_modules/collections_undo/abc.html#undoablemethod"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#collections_undo.abc.undoablemethod" title="Permalink to this definition">¶</a></dt>
+<dd><p>A decorator indicating undoable methods.</p>
+</dd></dl>
+
+</section>
+<section id="module-collections_undo.containers">
+<span id="collections-undo-containers-module"></span><h2>collections_undo.containers module<a class="headerlink" href="#module-collections_undo.containers" title="Permalink to this headline">¶</a></h2>
+<p>Using UndoManager in a way similar to Python object.</p>
+<dl class="py class">
+<dt class="sig sig-object py" id="collections_undo.containers.AbstractUndoableDict">
+<em class="property"><span class="pre">class</span> </em><span class="sig-prename descclassname"><span class="pre">collections_undo.containers.</span></span><span class="sig-name descname"><span class="pre">AbstractUndoableDict</span></span><a class="reference internal" href="../_modules/collections_undo/_containers/_dict.html#AbstractUndoableDict"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#collections_undo.containers.AbstractUndoableDict" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">MutableMapping</span></code>[<code class="xref py py-obj docutils literal notranslate"><span class="pre">collections_undo._containers._dict._K</span></code>, <code class="xref py py-obj docutils literal notranslate"><span class="pre">collections_undo._containers._dict._V</span></code>]</p>
+<dl class="py method">
+<dt class="sig sig-object py" id="collections_undo.containers.AbstractUndoableDict.clear">
+<span class="sig-name descname"><span class="pre">clear</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">None</span></span></span><a class="reference internal" href="../_modules/collections_undo/_containers/_dict.html#AbstractUndoableDict.clear"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#collections_undo.containers.AbstractUndoableDict.clear" title="Permalink to this definition">¶</a></dt>
+<dd><p>Clear the dictonary.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="collections_undo.containers.AbstractUndoableDict.redo">
+<span class="sig-name descname"><span class="pre">redo</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/collections_undo/_containers/_dict.html#AbstractUndoableDict.redo"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#collections_undo.containers.AbstractUndoableDict.redo" title="Permalink to this definition">¶</a></dt>
+<dd><p>Redo the last undo operation.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="collections_undo.containers.AbstractUndoableDict.undo">
+<span class="sig-name descname"><span class="pre">undo</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/collections_undo/_containers/_dict.html#AbstractUndoableDict.undo"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#collections_undo.containers.AbstractUndoableDict.undo" title="Permalink to this definition">¶</a></dt>
+<dd><p>Undo the last operation.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="collections_undo.containers.AbstractUndoableDict.update">
+<span class="sig-name descname"><span class="pre">update</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">other</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">()</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">/</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/collections_undo/_containers/_dict.html#AbstractUndoableDict.update"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#collections_undo.containers.AbstractUndoableDict.update" title="Permalink to this definition">¶</a></dt>
+<dd><p>Update the dictionary with the given arguments.</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="collections_undo.containers.AbstractUndoableList">
+<em class="property"><span class="pre">class</span> </em><span class="sig-prename descclassname"><span class="pre">collections_undo.containers.</span></span><span class="sig-name descname"><span class="pre">AbstractUndoableList</span></span><a class="reference internal" href="../_modules/collections_undo/_containers/_list.html#AbstractUndoableList"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#collections_undo.containers.AbstractUndoableList" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">MutableSequence</span></code>[<code class="xref py py-obj docutils literal notranslate"><span class="pre">collections_undo._containers._list._T</span></code>]</p>
+<p>An undoable mutable sequence.</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">__getitem__(self,</span> <span class="pre">key)</span> <span class="pre">-&gt;</span> <span class="pre">_T</span></code> … Get item at <code class="docutils literal notranslate"><span class="pre">key</span></code>. You must return a copy of
+the item if the item is mutable, such as a numpy array.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">_raw_setitem(self,</span> <span class="pre">key,</span> <span class="pre">val)</span> <span class="pre">-&gt;</span> <span class="pre">None</span></code> … Set item at <code class="docutils literal notranslate"><span class="pre">key</span></code>.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">_raw_delitem(self,</span> <span class="pre">key)</span> <span class="pre">-&gt;</span> <span class="pre">None</span></code> … Delete item at <code class="docutils literal notranslate"><span class="pre">key</span></code>.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">_raw_insert(self,</span> <span class="pre">index,</span> <span class="pre">val)</span></code> … Insert <code class="docutils literal notranslate"><span class="pre">val</span></code> at <code class="docutils literal notranslate"><span class="pre">index</span></code>.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">__len__(self)</span> <span class="pre">-&gt;</span> <span class="pre">int</span></code> … Get length of list.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">__iter__(self)</span> <span class="pre">-&gt;</span> <span class="pre">Iterator</span></code> … Iterate over list.</p></li>
+</ul>
+<dl class="py method">
+<dt class="sig sig-object py" id="collections_undo.containers.AbstractUndoableList.clear">
+<span class="sig-name descname"><span class="pre">clear</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">None</span></span></span><a class="reference internal" href="../_modules/collections_undo/_containers/_list.html#AbstractUndoableList.clear"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#collections_undo.containers.AbstractUndoableList.clear" title="Permalink to this definition">¶</a></dt>
+<dd><p>Clear the list.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="collections_undo.containers.AbstractUndoableList.extend">
+<span class="sig-name descname"><span class="pre">extend</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">values</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">Iterable</span><span class="p"><span class="pre">[</span></span><span class="pre">collections_undo._containers._list._T</span><span class="p"><span class="pre">]</span></span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">None</span></span></span><a class="reference internal" href="../_modules/collections_undo/_containers/_list.html#AbstractUndoableList.extend"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#collections_undo.containers.AbstractUndoableList.extend" title="Permalink to this definition">¶</a></dt>
+<dd><p>Extend the list with given values.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="collections_undo.containers.AbstractUndoableList.insert">
+<span class="sig-name descname"><span class="pre">insert</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">index</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">int</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">val</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">collections_undo._containers._list._T</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/collections_undo/_containers/_list.html#AbstractUndoableList.insert"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#collections_undo.containers.AbstractUndoableList.insert" title="Permalink to this definition">¶</a></dt>
+<dd><p>S.insert(index, value) – insert value before index</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="collections_undo.containers.AbstractUndoableList.redo">
+<span class="sig-name descname"><span class="pre">redo</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/collections_undo/_containers/_list.html#AbstractUndoableList.redo"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#collections_undo.containers.AbstractUndoableList.redo" title="Permalink to this definition">¶</a></dt>
+<dd><p>Redo the last undo operation.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="collections_undo.containers.AbstractUndoableList.reverse">
+<span class="sig-name descname"><span class="pre">reverse</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">None</span></span></span><a class="reference internal" href="../_modules/collections_undo/_containers/_list.html#AbstractUndoableList.reverse"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#collections_undo.containers.AbstractUndoableList.reverse" title="Permalink to this definition">¶</a></dt>
+<dd><p>S.reverse() – reverse <em>IN PLACE</em></p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="collections_undo.containers.AbstractUndoableList.undo">
+<span class="sig-name descname"><span class="pre">undo</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/collections_undo/_containers/_list.html#AbstractUndoableList.undo"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#collections_undo.containers.AbstractUndoableList.undo" title="Permalink to this definition">¶</a></dt>
+<dd><p>Undo the last operation.</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="collections_undo.containers.AbstractUndoableSet">
+<em class="property"><span class="pre">class</span> </em><span class="sig-prename descclassname"><span class="pre">collections_undo.containers.</span></span><span class="sig-name descname"><span class="pre">AbstractUndoableSet</span></span><a class="reference internal" href="../_modules/collections_undo/_containers/_set.html#AbstractUndoableSet"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#collections_undo.containers.AbstractUndoableSet" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">MutableSet</span></code>[<code class="xref py py-obj docutils literal notranslate"><span class="pre">collections_undo._containers._set._T</span></code>]</p>
+<dl class="py method">
+<dt class="sig sig-object py" id="collections_undo.containers.AbstractUndoableSet.add">
+<span class="sig-name descname"><span class="pre">add</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">value</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">collections_undo._containers._set._T</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">None</span></span></span><a class="reference internal" href="../_modules/collections_undo/_containers/_set.html#AbstractUndoableSet.add"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#collections_undo.containers.AbstractUndoableSet.add" title="Permalink to this definition">¶</a></dt>
+<dd><p>Add an element.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="collections_undo.containers.AbstractUndoableSet.clear">
+<span class="sig-name descname"><span class="pre">clear</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">None</span></span></span><a class="reference internal" href="../_modules/collections_undo/_containers/_set.html#AbstractUndoableSet.clear"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#collections_undo.containers.AbstractUndoableSet.clear" title="Permalink to this definition">¶</a></dt>
+<dd><p>Clear the set.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="collections_undo.containers.AbstractUndoableSet.discard">
+<span class="sig-name descname"><span class="pre">discard</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">value</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">collections_undo._containers._set._T</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">None</span></span></span><a class="reference internal" href="../_modules/collections_undo/_containers/_set.html#AbstractUndoableSet.discard"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#collections_undo.containers.AbstractUndoableSet.discard" title="Permalink to this definition">¶</a></dt>
+<dd><p>Remove an element.  Do not raise an exception if absent.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="collections_undo.containers.AbstractUndoableSet.redo">
+<span class="sig-name descname"><span class="pre">redo</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/collections_undo/_containers/_set.html#AbstractUndoableSet.redo"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#collections_undo.containers.AbstractUndoableSet.redo" title="Permalink to this definition">¶</a></dt>
+<dd><p>Redo the last undo operation.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="collections_undo.containers.AbstractUndoableSet.undo">
+<span class="sig-name descname"><span class="pre">undo</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/collections_undo/_containers/_set.html#AbstractUndoableSet.undo"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#collections_undo.containers.AbstractUndoableSet.undo" title="Permalink to this definition">¶</a></dt>
+<dd><p>Undo the last operation.</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="collections_undo.containers.UndoableDict">
+<em class="property"><span class="pre">class</span> </em><span class="sig-prename descclassname"><span class="pre">collections_undo.containers.</span></span><span class="sig-name descname"><span class="pre">UndoableDict</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">*</span></span><span class="n"><span class="pre">args</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/collections_undo/_containers/_dict.html#UndoableDict"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#collections_undo.containers.UndoableDict" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#collections_undo.containers.AbstractUndoableDict" title="collections_undo._containers._dict.AbstractUndoableDict"><code class="xref py py-class docutils literal notranslate"><span class="pre">collections_undo._containers._dict.AbstractUndoableDict</span></code></a>[<code class="xref py py-obj docutils literal notranslate"><span class="pre">collections_undo._containers._dict._K</span></code>, <code class="xref py py-obj docutils literal notranslate"><span class="pre">collections_undo._containers._dict._V</span></code>]</p>
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="collections_undo.containers.UndoableList">
+<em class="property"><span class="pre">class</span> </em><span class="sig-prename descclassname"><span class="pre">collections_undo.containers.</span></span><span class="sig-name descname"><span class="pre">UndoableList</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">iterable</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">()</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">/</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/collections_undo/_containers/_list.html#UndoableList"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#collections_undo.containers.UndoableList" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#collections_undo.containers.AbstractUndoableList" title="collections_undo._containers._list.AbstractUndoableList"><code class="xref py py-class docutils literal notranslate"><span class="pre">collections_undo._containers._list.AbstractUndoableList</span></code></a>[<code class="xref py py-obj docutils literal notranslate"><span class="pre">collections_undo._containers._list._T</span></code>]</p>
+<dl class="py method">
+<dt class="sig sig-object py" id="collections_undo.containers.UndoableList.sort">
+<span class="sig-name descname"><span class="pre">sort</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">*</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">key</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">reverse</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/collections_undo/_containers/_list.html#UndoableList.sort"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#collections_undo.containers.UndoableList.sort" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="collections_undo.containers.UndoableSet">
+<em class="property"><span class="pre">class</span> </em><span class="sig-prename descclassname"><span class="pre">collections_undo.containers.</span></span><span class="sig-name descname"><span class="pre">UndoableSet</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">iterable</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">Iterable</span><span class="p"><span class="pre">[</span></span><span class="pre">collections_undo._containers._set._T</span><span class="p"><span class="pre">]</span></span></span> <span class="o"><span class="pre">=</span></span> <span class="default_value"><span class="pre">()</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">/</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/collections_undo/_containers/_set.html#UndoableSet"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#collections_undo.containers.UndoableSet" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#collections_undo.containers.AbstractUndoableSet" title="collections_undo._containers._set.AbstractUndoableSet"><code class="xref py py-class docutils literal notranslate"><span class="pre">collections_undo._containers._set.AbstractUndoableSet</span></code></a>[<code class="xref py py-obj docutils literal notranslate"><span class="pre">collections_undo._containers._set._T</span></code>]</p>
+</dd></dl>
+
+</section>
+<section id="module-collections_undo.fmt">
+<span id="collections-undo-fmt-module"></span><h2>collections_undo.fmt module<a class="headerlink" href="#module-collections_undo.fmt" title="Permalink to this headline">¶</a></h2>
+<dl class="py function">
+<dt class="sig sig-object py" id="collections_undo.fmt.get_formatter">
+<span class="sig-prename descclassname"><span class="pre">collections_undo.fmt.</span></span><span class="sig-name descname"><span class="pre">get_formatter</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">func</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">Callable</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#collections_undo.fmt.get_formatter" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="collections_undo.fmt.map_object">
+<span class="sig-prename descclassname"><span class="pre">collections_undo.fmt.</span></span><span class="sig-name descname"><span class="pre">map_object</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">value</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">collections_undo._formatter._T</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">str</span></span></span><a class="headerlink" href="#collections_undo.fmt.map_object" title="Permalink to this definition">¶</a></dt>
+<dd><p>Map object to string.</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="collections_undo.fmt.register_type">
+<span class="sig-prename descclassname"><span class="pre">collections_undo.fmt.</span></span><span class="sig-name descname"><span class="pre">register_type</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">formatter</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">type</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">*</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">overwrite</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">bool</span></span> <span class="o"><span class="pre">=</span></span> <span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Callable</span><span class="p"><span class="pre">[</span></span><span class="p"><span class="pre">[</span></span><span class="pre">collections_undo._formatter._T</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">,</span> </span><span class="pre">str</span><span class="p"><span class="pre">]</span></span></span></span><a class="headerlink" href="#collections_undo.fmt.register_type" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</section>
+<section id="module-collections_undo">
+<span id="module-contents"></span><h2>Module contents<a class="headerlink" href="#module-collections_undo" title="Permalink to this headline">¶</a></h2>
+<dl class="py class">
+<dt class="sig sig-object py" id="collections_undo.UndoManager">
+<em class="property"><span class="pre">class</span> </em><span class="sig-prename descclassname"><span class="pre">collections_undo.</span></span><span class="sig-name descname"><span class="pre">UndoManager</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="pre">*</span></em>, <em class="sig-param"><span class="pre">measure:</span> <span class="pre">Callable[...</span></em>, <em class="sig-param"><span class="pre">float]</span> <span class="pre">=</span> <span class="pre">&lt;function</span> <span class="pre">always_zero&gt;</span></em>, <em class="sig-param"><span class="pre">maxsize:</span> <span class="pre">float</span> <span class="pre">|</span> <span class="pre">Literal['inf']</span> <span class="pre">=</span> <span class="pre">'inf'</span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/collections_undo/_stack.html#UndoManager"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#collections_undo.UndoManager" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<dl class="py method">
+<dt class="sig sig-object py" id="collections_undo.UndoManager.append">
+<span class="sig-name descname"><span class="pre">append</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">cmd</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">collections_undo._command._CommandBase</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">None</span></span></span><a class="reference internal" href="../_modules/collections_undo/_stack.html#UndoManager.append"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#collections_undo.UndoManager.append" title="Permalink to this definition">¶</a></dt>
+<dd><p>Append new command to the undo stack.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="collections_undo.UndoManager.blocked">
+<span class="sig-name descname"><span class="pre">blocked</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/collections_undo/_stack.html#UndoManager.blocked"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#collections_undo.UndoManager.blocked" title="Permalink to this definition">¶</a></dt>
+<dd><p>Block new command from being appended to the stack.</p>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="collections_undo.UndoManager.called">
+<em class="property"><span class="pre">property</span> </em><span class="sig-name descname"><span class="pre">called</span></span><em class="property"><span class="pre">:</span> <span class="pre">collections_undo._stack.CallbackList</span><span class="p"><span class="pre">[</span></span><span class="pre">Callable</span><span class="p"><span class="pre">[</span></span><span class="p"><span class="pre">[</span></span><span class="pre">collections_undo._command._CommandBase</span><span class="p"><span class="pre">,</span> </span><span class="pre">collections_undo._stack.CallType</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">,</span> </span><span class="pre">Any</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></em><a class="headerlink" href="#collections_undo.UndoManager.called" title="Permalink to this definition">¶</a></dt>
+<dd><p>Callback list for called events.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="collections_undo.UndoManager.catch_errors">
+<span class="sig-name descname"><span class="pre">catch_errors</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/collections_undo/_stack.html#UndoManager.catch_errors"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#collections_undo.UndoManager.catch_errors" title="Permalink to this definition">¶</a></dt>
+<dd><p>Catch all the errors in this context and evoke callbacks.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="collections_undo.UndoManager.clear">
+<span class="sig-name descname"><span class="pre">clear</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">None</span></span></span><a class="reference internal" href="../_modules/collections_undo/_stack.html#UndoManager.clear"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#collections_undo.UndoManager.clear" title="Permalink to this definition">¶</a></dt>
+<dd><p>Clear the stack.</p>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="collections_undo.UndoManager.empty">
+<em class="property"><span class="pre">property</span> </em><span class="sig-name descname"><span class="pre">empty</span></span><em class="property"><span class="pre">:</span> <span class="pre">bool</span></em><a class="headerlink" href="#collections_undo.UndoManager.empty" title="Permalink to this definition">¶</a></dt>
+<dd><p>True if stack is empty.</p>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="collections_undo.UndoManager.errored">
+<em class="property"><span class="pre">property</span> </em><span class="sig-name descname"><span class="pre">errored</span></span><em class="property"><span class="pre">:</span> <span class="pre">collections_undo._stack.CallbackList</span><span class="p"><span class="pre">[</span></span><span class="pre">Callable</span><span class="p"><span class="pre">[</span></span><span class="p"><span class="pre">[</span></span><span class="pre">collections_undo._command._CommandBase</span><span class="p"><span class="pre">,</span> </span><span class="pre">Exception</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">,</span> </span><span class="pre">Any</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></em><a class="headerlink" href="#collections_undo.UndoManager.errored" title="Permalink to this definition">¶</a></dt>
+<dd><p>Callback list for errored events.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="collections_undo.UndoManager.interface">
+<span class="sig-name descname"><span class="pre">interface</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">func</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">Callable</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">name</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">str</span> <span class="p"><span class="pre">|</span></span> <span class="pre">None</span></span> <span class="o"><span class="pre">=</span></span> <span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">collections_undo._undoable.UndoableInterface</span></span></span><a class="reference internal" href="../_modules/collections_undo/_stack.html#UndoManager.interface"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#collections_undo.UndoManager.interface" title="Permalink to this definition">¶</a></dt>
+<dt class="sig sig-object py">
+<span class="sig-name descname"><span class="pre">interface</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">func</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">Literal</span><span class="p"><span class="pre">[</span></span><span class="pre">None</span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">name</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">str</span> <span class="p"><span class="pre">|</span></span> <span class="pre">None</span></span> <span class="o"><span class="pre">=</span></span> <span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Callable</span><span class="p"><span class="pre">[</span></span><span class="p"><span class="pre">[</span></span><span class="pre">Callable</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">,</span> </span><span class="pre">collections_undo._undoable.UndoableInterface</span><span class="p"><span class="pre">]</span></span></span></span></dt>
+<dd><p>Decorator for undoable setter function construction.</p>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="collections_undo.UndoManager.is_blocked">
+<em class="property"><span class="pre">property</span> </em><span class="sig-name descname"><span class="pre">is_blocked</span></span><em class="property"><span class="pre">:</span> <span class="pre">bool</span></em><a class="headerlink" href="#collections_undo.UndoManager.is_blocked" title="Permalink to this definition">¶</a></dt>
+<dd><p>True if manager is blocked.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="collections_undo.UndoManager.link">
+<span class="sig-name descname"><span class="pre">link</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">other</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">Self</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">None</span></span></span><a class="reference internal" href="../_modules/collections_undo/_stack.html#UndoManager.link"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#collections_undo.UndoManager.link" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="collections_undo.UndoManager.merge_commands">
+<span class="sig-name descname"><span class="pre">merge_commands</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">start</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">int</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">stop</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">int</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">formatter</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">Callable</span> <span class="p"><span class="pre">|</span></span> <span class="pre">None</span></span> <span class="o"><span class="pre">=</span></span> <span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">None</span></span></span><a class="reference internal" href="../_modules/collections_undo/_stack.html#UndoManager.merge_commands"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#collections_undo.UndoManager.merge_commands" title="Permalink to this definition">¶</a></dt>
+<dd><p>Merge a command set into the undo stack.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="collections_undo.UndoManager.merging">
+<span class="sig-name descname"><span class="pre">merging</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">formatter</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">Callable</span> <span class="p"><span class="pre">|</span></span> <span class="pre">None</span></span> <span class="o"><span class="pre">=</span></span> <span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">None</span></span></span><a class="reference internal" href="../_modules/collections_undo/_stack.html#UndoManager.merging"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#collections_undo.UndoManager.merging" title="Permalink to this definition">¶</a></dt>
+<dd><p>Merge all the commands into a single command in this context.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="collections_undo.UndoManager.property">
+<span class="sig-name descname"><span class="pre">property</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">fget</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">Callable</span><span class="p"><span class="pre">[</span></span><span class="p"><span class="pre">[</span></span><span class="pre">Any</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">,</span> </span><span class="pre">Any</span><span class="p"><span class="pre">]</span></span> <span class="p"><span class="pre">|</span></span> <span class="pre">None</span></span> <span class="o"><span class="pre">=</span></span> <span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">fset</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">Callable</span><span class="p"><span class="pre">[</span></span><span class="p"><span class="pre">[</span></span><span class="pre">Any</span><span class="p"><span class="pre">,</span> </span><span class="pre">Any</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">,</span> </span><span class="pre">None</span><span class="p"><span class="pre">]</span></span> <span class="p"><span class="pre">|</span></span> <span class="pre">None</span></span> <span class="o"><span class="pre">=</span></span> <span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">fdel</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">Callable</span><span class="p"><span class="pre">[</span></span><span class="p"><span class="pre">[</span></span><span class="pre">Any</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">,</span> </span><span class="pre">None</span><span class="p"><span class="pre">]</span></span> <span class="p"><span class="pre">|</span></span> <span class="pre">None</span></span> <span class="o"><span class="pre">=</span></span> <span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">doc</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">str</span> <span class="p"><span class="pre">|</span></span> <span class="pre">None</span></span> <span class="o"><span class="pre">=</span></span> <span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">UndoableProperty</span></span></span><a class="reference internal" href="../_modules/collections_undo/_stack.html#UndoManager.property"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#collections_undo.UndoManager.property" title="Permalink to this definition">¶</a></dt>
+<dd><p>Decorator for undoable property construction.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="collections_undo.UndoManager.redo">
+<span class="sig-name descname"><span class="pre">redo</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Any</span></span></span><a class="reference internal" href="../_modules/collections_undo/_stack.html#UndoManager.redo"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#collections_undo.UndoManager.redo" title="Permalink to this definition">¶</a></dt>
+<dd><p>Redo last command and update undo/redo stacks.</p>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="collections_undo.UndoManager.stack_lengths">
+<em class="property"><span class="pre">property</span> </em><span class="sig-name descname"><span class="pre">stack_lengths</span></span><em class="property"><span class="pre">:</span> <span class="pre">collections_undo._stack.LengthPair</span></em><a class="headerlink" href="#collections_undo.UndoManager.stack_lengths" title="Permalink to this definition">¶</a></dt>
+<dd><p>Return length of undo and redo stack</p>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="collections_undo.UndoManager.stack_redo">
+<em class="property"><span class="pre">property</span> </em><span class="sig-name descname"><span class="pre">stack_redo</span></span><em class="property"><span class="pre">:</span> <span class="pre">list</span><span class="p"><span class="pre">[</span></span><span class="pre">collections_undo._command._CommandBase</span><span class="p"><span class="pre">]</span></span></em><a class="headerlink" href="#collections_undo.UndoManager.stack_redo" title="Permalink to this definition">¶</a></dt>
+<dd><p>List of redo stack.</p>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="collections_undo.UndoManager.stack_size">
+<em class="property"><span class="pre">property</span> </em><span class="sig-name descname"><span class="pre">stack_size</span></span><em class="property"><span class="pre">:</span> <span class="pre">float</span></em><a class="headerlink" href="#collections_undo.UndoManager.stack_size" title="Permalink to this definition">¶</a></dt>
+<dd><p>Return size of undo and redo stack</p>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="collections_undo.UndoManager.stack_undo">
+<em class="property"><span class="pre">property</span> </em><span class="sig-name descname"><span class="pre">stack_undo</span></span><em class="property"><span class="pre">:</span> <span class="pre">list</span><span class="p"><span class="pre">[</span></span><span class="pre">collections_undo._command._CommandBase</span><span class="p"><span class="pre">]</span></span></em><a class="headerlink" href="#collections_undo.UndoManager.stack_undo" title="Permalink to this definition">¶</a></dt>
+<dd><p>List of undo stack.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="collections_undo.UndoManager.undef">
+<span class="sig-name descname"><span class="pre">undef</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">undef</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">collections_undo._stack._F</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">collections_undo._stack._F</span></span></span><a class="reference internal" href="../_modules/collections_undo/_stack.html#UndoManager.undef"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#collections_undo.UndoManager.undef" title="Permalink to this definition">¶</a></dt>
+<dd><p>Mark an function as an undo-undefined function.</p>
+<p>When marked function is called, undo/redo stack get cleared.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="collections_undo.UndoManager.undo">
+<span class="sig-name descname"><span class="pre">undo</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Any</span></span></span><a class="reference internal" href="../_modules/collections_undo/_stack.html#UndoManager.undo"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#collections_undo.UndoManager.undo" title="Permalink to this definition">¶</a></dt>
+<dd><p>Undo last command and update undo/redo stacks.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="collections_undo.UndoManager.undoable">
+<span class="sig-name descname"><span class="pre">undoable</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">f</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">Callable</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">name</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">str</span> <span class="p"><span class="pre">|</span></span> <span class="pre">None</span></span> <span class="o"><span class="pre">=</span></span> <span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">collections_undo._reversible.ReversibleFunction</span></span></span><a class="reference internal" href="../_modules/collections_undo/_stack.html#UndoManager.undoable"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#collections_undo.UndoManager.undoable" title="Permalink to this definition">¶</a></dt>
+<dt class="sig sig-object py">
+<span class="sig-name descname"><span class="pre">undoable</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">f</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><a class="reference internal" href="#collections_undo.UndoManager.property" title="collections_undo.UndoManager.property"><span class="pre">property</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">name</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">str</span> <span class="p"><span class="pre">|</span></span> <span class="pre">None</span></span> <span class="o"><span class="pre">=</span></span> <span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">collections_undo._undoable.UndoableProperty</span></span></span></dt>
+<dt class="sig sig-object py">
+<span class="sig-name descname"><span class="pre">undoable</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">f</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">Literal</span><span class="p"><span class="pre">[</span></span><span class="pre">None</span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">name</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">str</span> <span class="p"><span class="pre">|</span></span> <span class="pre">None</span></span> <span class="o"><span class="pre">=</span></span> <span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Callable</span><span class="p"><span class="pre">[</span></span><span class="p"><span class="pre">[</span></span><span class="pre">Callable</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">,</span> </span><span class="pre">ReversibleFunction</span><span class="p"><span class="pre">]</span></span> <span class="p"><span class="pre">|</span></span> <span class="pre">Callable</span><span class="p"><span class="pre">[</span></span><span class="p"><span class="pre">[</span></span><a class="reference internal" href="#collections_undo.UndoManager.property" title="collections_undo.UndoManager.property"><span class="pre">property</span></a><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">,</span> </span><span class="pre">UndoableProperty</span><span class="p"><span class="pre">]</span></span></span></span></dt>
+<dd><p>Decorator for undoable object construction.</p>
+</dd></dl>
+
+</dd></dl>
+
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2022, Hanjin Liu.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script>
+
+</body>
+</html>

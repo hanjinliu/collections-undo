@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+  <meta charset="utf-8" /><meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Server-receiver Framework &mdash; collectionsundo 0.0.5.dev0 documentation</title>
+      <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+      <link rel="stylesheet" href="../_static/css/theme.css" type="text/css" />
+  <!--[if lt IE 9]>
+    <script src="../_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+
+        <script data-url_root="../" id="documentation_options" src="../_static/documentation_options.js"></script>
+        <script src="../_static/jquery.js"></script>
+        <script src="../_static/underscore.js"></script>
+        <script src="../_static/doctools.js"></script>
+    <script src="../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="Property-like Framework" href="property.html" />
+    <link rel="prev" title="Forward-reverse Framework" href="reversible.html" />
+</head>
+
+<body class="wy-body-for-nav">
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+            <a href="../index.html" class="icon icon-home"> collectionsundo
+          </a>
+              <div class="version">
+                0.0.5.dev0
+              </div>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="reversible.html">Forward-reverse Framework</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Server-receiver Framework</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#define-serve-receiver-interface">Define serve/receiver interface</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#example-of-using-the-interface">Example of using the interface</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="property.html">Property-like Framework</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="undoable_list.html">List</a></li>
+<li class="toctree-l1"><a class="reference internal" href="undoable_dict.html">Dictionary</a></li>
+<li class="toctree-l1"><a class="reference internal" href="undoable_set.html">Set</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../index.html">collectionsundo</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../index.html" class="icon icon-home"></a> &raquo;</li>
+      <li>Server-receiver Framework</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="../_sources/main/interface.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+
+  <section id="server-receiver-framework">
+<h1>Server-receiver Framework<a class="headerlink" href="#server-receiver-framework" title="Permalink to this headline">¶</a></h1>
+<p>Previous <a class="reference internal" href="reversible.html"><span class="doc">Forward-reverse Framework</span></a> section showed how to define undoable operations.
+Although it covers the fundamental functionalities, it is not convenient to
+use – you always have to pass the old state and the new state to the function.
+For more complicated functions, the arguments will be more cumbersome.</p>
+<p>In most cases, you will pass the current state of an instance as the old state.
+In the previous example,</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">collections_undo</span> <span class="kn">import</span> <span class="n">UndoManager</span>
+
+<span class="k">class</span> <span class="nc">A</span><span class="p">:</span>
+    <span class="n">mgr</span> <span class="o">=</span> <span class="n">UndoManager</span><span class="p">()</span>
+
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">x</span> <span class="o">=</span> <span class="mi">0</span>
+
+    <span class="k">def</span> <span class="nf">set_value</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">x</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_set_value</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">x</span><span class="p">)</span>
+
+    <span class="nd">@mgr</span><span class="o">.</span><span class="n">undoable</span>
+    <span class="k">def</span> <span class="nf">_set_value</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">x</span><span class="p">,</span> <span class="n">x_old</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">x</span> <span class="o">=</span> <span class="n">x</span>
+
+    <span class="nd">@_set_value</span><span class="o">.</span><span class="n">undo_def</span>
+    <span class="k">def</span> <span class="nf">_set_value</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">x</span><span class="p">,</span> <span class="n">x_old</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">x</span> <span class="o">=</span> <span class="n">x_old</span>
+</pre></div>
+</div>
+<p>the <code class="xref py py-meth docutils literal notranslate"><span class="pre">set_value()</span></code> method uses <code class="docutils literal notranslate"><span class="pre">self.x</span></code> to describe current instance state.</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="k">def</span> <span class="nf">set_value</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">x</span><span class="p">):</span>
+    <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_set_value</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">x</span><span class="p">)</span>
+</pre></div>
+</div>
+<section id="define-serve-receiver-interface">
+<h2>Define serve/receiver interface<a class="headerlink" href="#define-serve-receiver-interface" title="Permalink to this headline">¶</a></h2>
+<p>A new framework for this type of implementation is the “server-receiver”
+framework. The most important point here is that the “set_value” function
+is called both in do and undo, as long as proper “old_value” is provided.</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="bp">self</span><span class="o">.</span><span class="n">set_value</span><span class="p">(</span><span class="n">new_value</span><span class="p">)</span>  <span class="c1"># do</span>
+<span class="bp">self</span><span class="o">.</span><span class="n">set_value</span><span class="p">(</span><span class="n">old_value</span><span class="p">)</span>  <span class="c1"># undo</span>
+</pre></div>
+</div>
+<p>Providing <code class="docutils literal notranslate"><span class="pre">new_value</span></code> is totally dependent on user input so it is beyond
+management by the undo manager. What an undo manager should do is to record the
+current state as the <code class="docutils literal notranslate"><span class="pre">old_value</span></code> before actually calling the <code class="xref py py-meth docutils literal notranslate"><span class="pre">set_value()</span></code>
+function. Therefore, all you have to do is to define a function that will
+<strong>serve</strong> the current state as arguments.</p>
+<p>Here’s the precise definition of “server” and “receiver”.</p>
+<ul class="simple">
+<li><p><strong>Server</strong> – a function that returns the current state as a <code class="docutils literal notranslate"><span class="pre">tuple</span></code> and a
+<code class="docutils literal notranslate"><span class="pre">dict</span></code> (positional and keyword arguments).</p></li>
+<li><p><strong>Receiver</strong> – a function that receive arguments and do something (you can consider
+it identical to the forward function in the last section).</p></li>
+</ul>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>The signature of server, receiver and the returned values of server must be the
+same.</p>
+</div>
+</section>
+<section id="example-of-using-the-interface">
+<h2>Example of using the interface<a class="headerlink" href="#example-of-using-the-interface" title="Permalink to this headline">¶</a></h2>
+<p>Following example uses the server-receiver interface to implement the previous
+example. Note that again, the definition is very similar to <code class="docutils literal notranslate"><span class="pre">property</span></code>.</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">collections_undo</span> <span class="kn">import</span> <span class="n">UndoManager</span>
+
+<span class="k">class</span> <span class="nc">A</span><span class="p">:</span>
+    <span class="n">mgr</span> <span class="o">=</span> <span class="n">UndoManager</span><span class="p">()</span>
+
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">x</span> <span class="o">=</span> <span class="mi">0</span>
+
+    <span class="nd">@mgr</span><span class="o">.</span><span class="n">interface</span>  <span class="c1"># receiver</span>
+    <span class="k">def</span> <span class="nf">set_value</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">x</span><span class="p">):</span>
+        <span class="c1"># this function should look identical to what you do without thinking</span>
+        <span class="c1"># of undoing this.</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">x</span> <span class="o">=</span> <span class="n">x</span>
+
+    <span class="nd">@set_value</span><span class="o">.</span><span class="n">server</span>  <span class="c1"># define the server</span>
+    <span class="k">def</span> <span class="nf">set_value</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">x</span><span class="p">):</span>  <span class="c1"># x is useless here</span>
+        <span class="k">return</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">x</span><span class="p">,),</span> <span class="p">{}</span>
+</pre></div>
+</div>
+<p>When a value is set</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">a</span> <span class="o">=</span> <span class="n">A</span><span class="p">()</span>
+<span class="n">a</span><span class="o">.</span><span class="n">set_value</span><span class="p">(</span><span class="mi">10</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>the current state (<code class="docutils literal notranslate"><span class="pre">self.x</span> <span class="pre">==</span> <span class="pre">0</span></code>) is recorded (served) to the undo manager by
+the server <code class="docutils literal notranslate"><span class="pre">a.set_value._server(10)</span></code> before actually setting the new value.
+When this operation is undone,</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">a</span><span class="o">.</span><span class="n">mgr</span><span class="o">.</span><span class="n">undo</span><span class="p">()</span>
+</pre></div>
+</div>
+<p>receiver function receives the arguments from the previously called server. This
+undo operation is almost equivalent to the following:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">args</span><span class="p">,</span> <span class="n">kwargs</span> <span class="o">=</span> <span class="n">a</span><span class="o">.</span><span class="n">set_value</span><span class="o">.</span><span class="n">_server</span><span class="p">(</span><span class="mi">10</span><span class="p">)</span>
+<span class="n">a</span><span class="o">.</span><span class="n">set_value</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+</pre></div>
+</div>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="reversible.html" class="btn btn-neutral float-left" title="Forward-reverse Framework" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="property.html" class="btn btn-neutral float-right" title="Property-like Framework" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2022, Hanjin Liu.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script>
+
+</body>
+</html>
