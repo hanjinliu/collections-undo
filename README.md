@@ -1,6 +1,7 @@
 # collections-undo
 
 General undo/redo implementation in Python.
+[&rarr; Documentation](https://hanjinliu.github.io/collections-undo/)
 
 ### Installation
 
