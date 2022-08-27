@@ -1,5 +1,5 @@
 from __future__ import annotations
-from typing import Callable, Any
+from typing import Callable, Any, Dict
 
 
 class _Empty:
@@ -13,4 +13,4 @@ class _Empty:
 empty = _Empty()
 
 
-FormatterType = Callable[[Callable, tuple, dict[str, Any]], str]
+FormatterType = Callable[[Callable, tuple, Dict[str, Any]], str]
