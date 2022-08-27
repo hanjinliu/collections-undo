@@ -4,7 +4,7 @@
   <meta charset="utf-8" /><meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
 
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Server-receiver Framework &mdash; collectionsundo 0.0.5.dev0 documentation</title>
+  <title>Server-receiver Framework &mdash; collectionsundo 0.0.5 documentation</title>
       <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
       <link rel="stylesheet" href="../_static/css/theme.css" type="text/css" />
   <!--[if lt IE 9]>
@@ -14,6 +14,7 @@
         <script data-url_root="../" id="documentation_options" src="../_static/documentation_options.js"></script>
         <script src="../_static/jquery.js"></script>
         <script src="../_static/underscore.js"></script>
+        <script src="../_static/_sphinx_javascript_frameworks_compat.js"></script>
         <script src="../_static/doctools.js"></script>
     <script src="../_static/js/theme.js"></script>
     <link rel="index" title="Index" href="../genindex.html" />
@@ -30,7 +31,7 @@
             <a href="../index.html" class="icon icon-home"> collectionsundo
           </a>
               <div class="version">
-                0.0.5.dev0
+                0.0.5
               </div>
 <div role="search">
   <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
@@ -80,7 +81,7 @@
            <div itemprop="articleBody">
 
   <section id="server-receiver-framework">
-<h1>Server-receiver Framework<a class="headerlink" href="#server-receiver-framework" title="Permalink to this headline">¶</a></h1>
+<h1>Server-receiver Framework<a class="headerlink" href="#server-receiver-framework" title="Permalink to this heading">¶</a></h1>
 <p>Previous <a class="reference internal" href="reversible.html"><span class="doc">Forward-reverse Framework</span></a> section showed how to define undoable operations.
 Although it covers the fundamental functionalities, it is not convenient to
 use – you always have to pass the old state and the new state to the function.
@@ -113,7 +114,7 @@ In the previous example,</p>
 </pre></div>
 </div>
 <section id="define-serve-receiver-interface">
-<h2>Define serve/receiver interface<a class="headerlink" href="#define-serve-receiver-interface" title="Permalink to this headline">¶</a></h2>
+<h2>Define serve/receiver interface<a class="headerlink" href="#define-serve-receiver-interface" title="Permalink to this heading">¶</a></h2>
 <p>A new framework for this type of implementation is the “server-receiver”
 framework. The most important point here is that the “set_value” function
 is called both in do and undo, as long as proper “old_value” is provided.</p>
@@ -140,7 +141,7 @@ same.</p>
 </div>
 </section>
 <section id="example-of-using-the-interface">
-<h2>Example of using the interface<a class="headerlink" href="#example-of-using-the-interface" title="Permalink to this headline">¶</a></h2>
+<h2>Example of using the interface<a class="headerlink" href="#example-of-using-the-interface" title="Permalink to this heading">¶</a></h2>
 <p>Following example uses the server-receiver interface to implement the previous
 example. Note that again, the definition is very similar to <code class="docutils literal notranslate"><span class="pre">property</span></code>.</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">collections_undo</span> <span class="kn">import</span> <span class="n">UndoManager</span>
