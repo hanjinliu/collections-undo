@@ -259,3 +259,29 @@ def test_blocked():
     assert mgr.stack_lengths == (1, 0)
     d()
     assert mgr.stack_lengths == (2, 0)
+
+def test_nested_merge():
+    mgr = UndoManager()
+    state = 0
+
+    @mgr.interface
+    def a(x):
+        nonlocal state
+        state = x
+
+    @a.server
+    def a(x):
+        return (state,), {}
+
+    with mgr.merging():
+        a(0)
+        with mgr.merging():
+            a(1)
+            a(2)
+
+    assert mgr.stack_lengths == (1, 0)
+    assert state == 2
+    mgr.undo()
+    assert state == 0
+    mgr.redo()
+    assert state == 2
