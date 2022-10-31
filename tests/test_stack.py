@@ -278,10 +278,11 @@ def test_nested_merge():
         with mgr.merging():
             a(1)
             a(2)
+        a(3)
 
     assert mgr.stack_lengths == (1, 0)
-    assert state == 2
+    assert state == 3
     mgr.undo()
     assert state == 0
     mgr.redo()
-    assert state == 2
+    assert state == 3
