@@ -1,6 +1,6 @@
 from __future__ import annotations
 from functools import wraps, partial
-from typing import Any, Callable, TYPE_CHECKING, Iterable, TypeVar
+from typing import Any, Callable, TYPE_CHECKING, Iterable, TypeVar, Generic
 from ._formatter import get_formatter
 from ._const import FormatterType
 
@@ -9,8 +9,11 @@ if TYPE_CHECKING:
     from ._stack import UndoManager
 
     _P = ParamSpec("_P")
-    _R = TypeVar("_R")
-    _RR = TypeVar("_RR")
+else:
+    _P = TypeVar("_P")
+
+_R = TypeVar("_R")
+_RR = TypeVar("_RR")
 
 _Fmt = TypeVar("_Fmt", bound=FormatterType)
 
@@ -38,7 +41,7 @@ def _as_method(func, obj):
     return partial(func, obj)
 
 
-class ReversibleFunction:
+class ReversibleFunction(Generic[_P, _R, _RR]):
     """Reversible function for undoable operations."""
 
     def __init__(
@@ -95,7 +98,7 @@ class ReversibleFunction:
     def function_id(self) -> int:
         return self._function_id
 
-    def undo_def(self, undo: Callable[_P, _RR]) -> Self:
+    def undo_def(self, undo: Callable[_P, _RR]) -> Self[_P, _R]:
         """Define inverse function and return a new object."""
         return self.__newlike__(
             func=self._func_fw,

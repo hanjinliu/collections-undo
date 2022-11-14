@@ -1,6 +1,6 @@
 from __future__ import annotations
 from functools import partial, wraps
-from typing import Any, Callable, TYPE_CHECKING, Literal, TypeVar
+from typing import Any, Callable, TYPE_CHECKING, Generic, Literal, TypeVar
 from ._reversible import ReversibleFunction
 from ._const import empty, FormatterType
 
@@ -9,9 +9,13 @@ if TYPE_CHECKING:
     from ._stack import UndoManager
 
     _P = ParamSpec("_P")
-    _R = TypeVar("_R")
     ArgsType = tuple[tuple, dict[str, Any]]
     _Args = TypeVar("_Args", bound=ArgsType)
+else:
+    _P = TypeVar("_P")
+    _Args = TypeVar("_Args")
+
+_R = TypeVar("_R")
 
 
 def _dummy_func(*args, **kwargs) -> None:
@@ -21,7 +25,7 @@ def _dummy_func(*args, **kwargs) -> None:
 _Fmt = TypeVar("_Fmt", bound=FormatterType)
 
 
-class UndoableInterface:
+class UndoableInterface(Generic[_P, _R, _Args]):
     """
     An undoable object described by server/receiver interface.
 
@@ -52,7 +56,7 @@ class UndoableInterface:
         self._formatter_fw = None
         self._formatter_rv = None
 
-    def server(self, fserve: Callable[_P, _Args]) -> UndoableInterface:
+    def server(self, fserve: Callable[_P, _Args]) -> UndoableInterface[_P, _R, _Args]:
         """Set the server function."""
         itf = UndoableInterface(
             fserve=fserve,
@@ -63,7 +67,7 @@ class UndoableInterface:
         itf._formatter_rv = self._formatter_rv
         return itf
 
-    def receiver(self, freceive: Callable[_P, _R]) -> UndoableInterface:
+    def receiver(self, freceive: Callable[_P, _R]) -> UndoableInterface[_P, _R, _Args]:
         """Set the receiver function."""
         itf = UndoableInterface(
             fserve=self._fserve,

@@ -6,12 +6,12 @@ def test_stack_operations():
     mgr = UndoManager()
 
     @mgr.undoable
-    def a(x, y):
+    def a(x: int, y: int):
         mock("do", x, y)
         return 0
 
     @a.undo_def
-    def a(x, y):
+    def a(x: int, y: int):
         mock("undo", x, y)
         return -1
 

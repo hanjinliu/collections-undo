@@ -20,7 +20,11 @@ from ._command import Command, _CommandBase
 from ._const import empty
 
 if TYPE_CHECKING:
-    from typing_extensions import Self
+    from typing_extensions import Self, ParamSpec
+
+    _P = ParamSpec("_P")
+    _R = TypeVar("_R")
+    _RR = TypeVar("_RR")
 
 _F = TypeVar("_F", bound=Callable)
 
@@ -271,7 +275,9 @@ class UndoManager:
         return None
 
     @overload
-    def undoable(self, f: Callable, name: str | None = None) -> ReversibleFunction:
+    def undoable(
+        self, f: Callable[_P, _R], name: str | None = None
+    ) -> ReversibleFunction[_P, _R, Any]:
         ...
 
     @overload
@@ -283,7 +289,7 @@ class UndoManager:
         self,
         f: Literal[None],
         name: str | None = None,
-    ) -> Callable[[Callable], ReversibleFunction] | Callable[
+    ) -> Callable[[Callable[_P, _R]], ReversibleFunction[_P, _R, Any]] | Callable[
         [property], UndoableProperty
     ]:
         ...
@@ -312,7 +318,9 @@ class UndoManager:
         return UndoableProperty(fget, fset, fdel, doc=doc, mgr=self)
 
     @overload
-    def interface(self, func: Callable, name: str | None = None) -> UndoableInterface:
+    def interface(
+        self, func: Callable[_P, _R], name: str | None = None
+    ) -> UndoableInterface[_P, _R, Any]:
         ...
 
     @overload
@@ -320,7 +328,7 @@ class UndoManager:
         self,
         func: Literal[None],
         name: str | None = None,
-    ) -> Callable[[Callable], UndoableInterface]:
+    ) -> Callable[[Callable[_P, _R]], UndoableInterface[_P, _R, Any]]:
         ...
 
     def interface(
