@@ -1,8 +1,10 @@
 from __future__ import annotations
 from abc import ABC, abstractmethod
+from functools import lru_cache
 from typing import Any, Callable, Iterable, Iterator, TYPE_CHECKING
+import inspect
 
-from ._reversible import ReversibleFunction
+from collections_undo._reversible import ReversibleFunction
 
 FormatterType = Callable[["Command"], str]
 
@@ -76,10 +78,19 @@ class Command(_CommandBase):
 
     @property
     def function_id(self) -> int:
+        """Return the function id."""
         return self.func.function_id
 
+    @lru_cache(maxsize=128)
+    def bind_args(self) -> inspect.BoundArguments:
+        return inspect.signature(self.func._func_fw).bind(*self.args, **self.kwargs)
+
     @classmethod
-    def merge(cls, cmds: Iterable[Command], formatter=None) -> CommandGroup:
+    def merge(
+        cls,
+        cmds: Iterable[Command],
+        formatter: FormatterType | None = None,
+    ) -> CommandGroup:
         group = CommandGroup(cmds, formatter=formatter)
         return group
 
@@ -99,6 +110,16 @@ class Command(_CommandBase):
         if inv:
             return self.func.format_reverse_call(*self.args, **self.kwargs)
         return self.func.format_forward_call(*self.args, **self.kwargs)
+
+    def automerge(self, cmd: Command) -> Self:
+        """Automatically merge the command with the given command."""
+        rule = cmd.func._automerge_rule
+        if rule is None:
+            raise ValueError(f"Automerge rule is not defined for {cmd.func}.")
+        if self.func is not cmd.func:
+            raise ValueError(f"Cannot merge different functions.")
+        _args, _kwargs = rule(self.bind_args().arguments, cmd.bind_args().arguments)
+        return self.__class__(self.func, _args, _kwargs)  # TODO: size?
 
 
 class CommandGroup(_CommandBase):

@@ -40,6 +40,7 @@ class ManagerState:
         self.maxsize = maxsize
         self.is_blocked = False
         self.is_merging = False
+        self.is_automerging = False
         self.stack_undo: list[_CommandBase] = []
         self.stack_redo: list[_CommandBase] = []
         self.stack_undo_size = 0.0
@@ -181,7 +182,17 @@ class UndoManager:
         if self.is_blocked:
             return None
 
-        self._state.stack_undo.append(cmd)
+        if self._state.is_automerging and len(self._state.stack_undo) > 0:
+            last_cmd = self._state.stack_undo[-1]
+            if isinstance(last_cmd, Command):
+                new_cmd = last_cmd.automerge(cmd)
+                self._state.stack_undo.pop(-1)
+            else:
+                new_cmd = cmd
+            self._state.stack_undo.append(new_cmd)
+        else:
+            self._state.stack_undo.append(cmd)
+
         self._state.stack_redo.clear()
         self.called.evoke(cmd, CallType.call)
 
@@ -342,6 +353,17 @@ class UndoManager:
         except Exception as e:
             self.errored.evoke(e)
             raise e
+
+    @contextmanager
+    def automerging(self):
+        """Enable auto-merging in this context."""
+        was_automerging = self._state.is_automerging
+        self._state.is_automerging = True
+        try:
+            yield None
+        finally:
+            self._state.is_automerging = was_automerging
+        return None
 
 
 def _join_stack(stack: list, max: int = 10):

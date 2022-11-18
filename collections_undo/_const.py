@@ -1,5 +1,5 @@
 from __future__ import annotations
-from typing import Callable, Any, Dict
+from typing import Callable, Any, Tuple, Dict
 
 
 class _Empty:
@@ -14,3 +14,5 @@ empty = _Empty()
 
 
 FormatterType = Callable[[Callable, tuple, Dict[str, Any]], str]
+Args = Tuple[Tuple[Any], Dict[str, Any]]
+AutoMergeRuleType = Callable[[Dict[str, Any], Dict[str, Any]], Args]

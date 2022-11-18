@@ -1,16 +1,15 @@
 from __future__ import annotations
 from functools import partial, wraps
 from typing import Any, Callable, TYPE_CHECKING, Generic, Literal, TypeVar
-from ._reversible import ReversibleFunction
-from ._const import empty, FormatterType
+from collections_undo._reversible import ReversibleFunction
+from collections_undo._const import empty, FormatterType, Args
 
 if TYPE_CHECKING:
     from typing_extensions import ParamSpec
-    from ._stack import UndoManager
+    from collections_undo._stack import UndoManager
 
     _P = ParamSpec("_P")
-    ArgsType = tuple[tuple, dict[str, Any]]
-    _Args = TypeVar("_Args", bound=ArgsType)
+    _Args = TypeVar("_Args", bound=Args)
 else:
     _P = TypeVar("_P")
     _Args = TypeVar("_Args")
@@ -134,13 +133,17 @@ class UndoableInterface(Generic[_P, _R, _Args]):
         return f"{type(self).__name__}<{self._freceive!r}>"
 
     def _create_function(self) -> ReversibleFunction:
-        def fw(new: ArgsType, old: ArgsType):
+        """Create a reversible function from the interface."""
+
+        # forward function
+        def fw(new: Args, old: Args):
             args, kwargs = new
             return self._freceive(*args, **kwargs)
 
         fw.__name__ = self.__name__
 
-        def rv(new: ArgsType, old: ArgsType):
+        # reverse function
+        def rv(new: Args, old: Args):
             if old is None:
                 return empty
             args, kwargs = old
