@@ -1,13 +1,9 @@
 from __future__ import annotations
 from contextlib import contextmanager
-from enum import Enum
 from typing import (
     Any,
     Callable,
-    Iterator,
     Literal,
-    MutableSequence,
-    NamedTuple,
     TYPE_CHECKING,
     TypeVar,
     overload,
@@ -18,78 +14,15 @@ from ._reversible import ReversibleFunction
 from ._undoable import UndoableInterface, UndoableProperty
 from ._command import Command, _CommandBase
 from ._const import empty
+from ._stack_utils import LengthPair, CallbackList, CallType
 
 if TYPE_CHECKING:
     from typing_extensions import Self, ParamSpec
 
     _P = ParamSpec("_P")
     _R = TypeVar("_R")
-    _RR = TypeVar("_RR")
 
 _F = TypeVar("_F", bound=Callable)
-
-
-class CallbackList(MutableSequence[_F]):
-    """
-    A list of callbacks of UndoManager updates.
-
-    Callbacks are useful for such as logging.
-    """
-
-    def __init__(self) -> None:
-        self._list = []
-
-    def insert(self, index: int, callback: _F, /):
-        self._check_callable(callback)
-        self._list.insert(index, callback)
-
-    def __repr__(self) -> str:
-        return f"{type(self).__name__}({self._list!r})"
-
-    def __len__(self) -> int:
-        return len(self._list)
-
-    def __iter__(self) -> Iterator[_F]:
-        return iter(self._list)
-
-    def __getitem__(self, key):
-        return self._list[key]
-
-    def __setitem__(self, key, callback):
-        self._check_callable(callback)
-        self._list[key] = callback
-
-    def __delitem__(self, key):
-        del self._list[key]
-
-    def evoke(self, *args, **kwargs) -> None:
-        """Evoce all callbacks."""
-        for callback in self._list:
-            callback(*args, **kwargs)
-        return None
-
-    @staticmethod
-    def _check_callable(obj):
-        if not callable(obj):
-            raise TypeError("Can only insert callable object to the callback list.")
-
-
-class CallType(Enum):
-    call = "call"
-    undo = "undo"
-    redo = "redo"
-
-    def __eq__(self, other):
-        if isinstance(other, str):
-            return self.value == other
-        return super().__eq__(other)
-
-
-class LengthPair(NamedTuple):
-    """Pair of stack size."""
-
-    undo: int
-    redo: int
 
 
 def always_zero(*args, **kwargs) -> float:
@@ -106,6 +39,8 @@ class ManagerState:
         self.measure = measure
         self.maxsize = maxsize
         self.is_blocked = False
+        self.is_merging = False
+        self.is_automerging = False
         self.stack_undo: list[_CommandBase] = []
         self.stack_redo: list[_CommandBase] = []
         self.stack_undo_size = 0.0
@@ -129,7 +64,6 @@ class UndoManager:
         if not callable(measure):
             raise TypeError("measure must be callable")
         self._state = ManagerState(measure, float(maxsize))
-        self._is_merging = False
 
     def __repr__(self) -> str:
         cls_name = type(self).__name__
@@ -248,7 +182,18 @@ class UndoManager:
         if self.is_blocked:
             return None
 
-        self._state.stack_undo.append(cmd)
+        if self._state.is_automerging and len(self._state.stack_undo) > 0:
+            last_cmd = self._state.stack_undo[-1]
+            if isinstance(last_cmd, Command):
+                new_cmd = last_cmd.automerge_with(cmd)
+                popped_cmd = self._state.stack_undo.pop(-1)
+                self._state.stack_undo_size -= popped_cmd.size
+            else:
+                new_cmd = cmd
+            self._state.stack_undo.append(new_cmd)
+        else:
+            self._state.stack_undo.append(cmd)
+
         self._state.stack_redo.clear()
         self.called.evoke(cmd, CallType.call)
 
@@ -372,21 +317,27 @@ class UndoManager:
     @contextmanager
     def merging(self, formatter: Callable | None = None) -> None:
         """Merge all the commands into a single command in this context."""
-        if self._is_merging:
+        if self._state.is_merging:
             yield None
             return None
 
         blocked = self._state.is_blocked
+        merging = self._state.is_merging
         len_before = len(self._state.stack_undo)
-        self._is_merging = True
+        self._state.is_merging = True
         try:
             yield None
         finally:
-            self._is_merging = False
-            if not blocked:
+            self._state.is_merging = merging
+            if not blocked and not merging:
                 len_after = len(self._state.stack_undo)
                 self.merge_commands(len_before, len_after, formatter=formatter)
                 self.called.evoke(self._state.stack_undo[-1], CallType.call)
+        return None
+
+    def set_merge(self, enabled: bool) -> None:
+        """Enable/disable merging."""
+        self._state.is_merging = bool(enabled)
         return None
 
     @contextmanager
@@ -408,6 +359,22 @@ class UndoManager:
         except Exception as e:
             self.errored.evoke(e)
             raise e
+
+    @contextmanager
+    def automerging(self):
+        """Enable auto-merging in this context."""
+        was_automerging = self._state.is_automerging
+        self._state.is_automerging = True
+        try:
+            yield None
+        finally:
+            self._state.is_automerging = was_automerging
+        return None
+
+    def set_automerge(self, enabled: bool):
+        """Enable/disable auto-merging."""
+        self._state.is_automerging = bool(enabled)
+        return None
 
 
 def _join_stack(stack: list, max: int = 10):

@@ -1,8 +1,8 @@
 from __future__ import annotations
 from functools import wraps, partial
 from typing import Any, Callable, TYPE_CHECKING, Iterable, TypeVar, Generic
-from ._formatter import get_formatter
-from ._const import FormatterType
+from collections_undo._formatter import get_formatter
+from collections_undo._const import FormatterType, AutoMergeRuleType, Args
 
 if TYPE_CHECKING:
     from typing_extensions import ParamSpec, Self
@@ -63,17 +63,11 @@ class ReversibleFunction(Generic[_P, _R, _RR]):
         self._instances: dict[int, Self] = {}
 
         # Default argument mapping.
-        self._formatter_fw: Callable[
-            [Callable, tuple, dict[str, Any]], str
-        ] = get_formatter(func)
-        self._formatter_rv: Callable[
-            [Callable, tuple, dict[str, Any]], str
-        ] = self._formatter_fw
+        self._formatter_fw: FormatterType = get_formatter(func)
+        self._formatter_rv: FormatterType = self._formatter_fw
 
-        self._map_args: Callable[[tuple, dict], tuple[tuple, dict]] = _default_map_args
-        self._merge_with: Callable[
-            [ReversibleFunction, tuple, dict], tuple[tuple, dict] | None
-        ] = _default_merge_with
+        self._map_args: Callable[[tuple, dict], Args] = _default_map_args
+        self._automerge_rule: Callable[[dict, dict], tuple[tuple, dict]] | None = None
 
     def __hash__(self) -> int:
         """ReversibleFunction is immutable in public level so use id for hashing."""
@@ -96,6 +90,7 @@ class ReversibleFunction(Generic[_P, _R, _RR]):
 
     @property
     def function_id(self) -> int:
+        """Return the function ID."""
         return self._function_id
 
     def undo_def(self, undo: Callable[_P, _RR]) -> Self[_P, _R]:
@@ -157,16 +152,23 @@ class ReversibleFunction(Generic[_P, _R, _RR]):
             return self
         _id = id(obj)
         if (out := self._instances.get(_id, None)) is None:
+            # get inverse function
             if self._func_rv is None:
                 inv_func = None
             else:
                 inv_func = self._func_rv.__get__(obj, objtype)
+
+            # register instance
             self._instances[_id] = out = type(self)(
                 func=self._func_fw.__get__(obj, objtype),
                 mgr=self._mgr.__get__(obj, objtype),
                 inverse_func=inv_func,
             )
+
+            # copy name
             out.__name__ = self.__name__
+
+            # get formatters
             if self._formatter_fw is self._formatter_rv:
                 out._formatter_fw = out._formatter_rv = _as_method(
                     self._formatter_fw, obj
@@ -174,8 +176,15 @@ class ReversibleFunction(Generic[_P, _R, _RR]):
             else:
                 out._formatter_fw = _as_method(self._formatter_fw, obj)
                 out._formatter_rv = _as_method(self._formatter_rv, obj)
+
+            # copy argument mapping
             out._map_args = self._map_args
-            out._merge_with = self._merge_with
+
+            # get automerge rule
+            if self._automerge_rule is not None:
+                out._automerge_rule = _as_method(self._automerge_rule, obj)
+            else:
+                out._automerge_rule = None
         return out
 
     @classmethod
@@ -213,11 +222,11 @@ class ReversibleFunction(Generic[_P, _R, _RR]):
             mgr=self._mgr,
         )
 
+    def automerge_rule(self, rule: AutoMergeRuleType):
+        self._automerge_rule = rule
+        return rule
+
 
 def _default_map_args(*args, **kwargs):
     """The default argument mapping."""
     return args, kwargs
-
-
-def _default_merge_with(*args, **kwargs):
-    return None

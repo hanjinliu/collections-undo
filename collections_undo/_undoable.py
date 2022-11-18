@@ -1,16 +1,15 @@
 from __future__ import annotations
 from functools import partial, wraps
 from typing import Any, Callable, TYPE_CHECKING, Generic, Literal, TypeVar
-from ._reversible import ReversibleFunction
-from ._const import empty, FormatterType
+from collections_undo._reversible import ReversibleFunction
+from collections_undo._const import empty, FormatterType, Args
 
 if TYPE_CHECKING:
     from typing_extensions import ParamSpec
-    from ._stack import UndoManager
+    from collections_undo._stack import UndoManager
 
     _P = ParamSpec("_P")
-    ArgsType = tuple[tuple, dict[str, Any]]
-    _Args = TypeVar("_Args", bound=ArgsType)
+    _Args = TypeVar("_Args", bound=Args)
 else:
     _P = TypeVar("_P")
     _Args = TypeVar("_Args")
@@ -100,6 +99,7 @@ class UndoableInterface(Generic[_P, _R, _Args]):
 
     @property
     def func(self) -> ReversibleFunction:
+        """Return the reversible function."""
         if self._func is None:
             self._func = self._create_function()
         return self._func
@@ -134,13 +134,17 @@ class UndoableInterface(Generic[_P, _R, _Args]):
         return f"{type(self).__name__}<{self._freceive!r}>"
 
     def _create_function(self) -> ReversibleFunction:
-        def fw(new: ArgsType, old: ArgsType):
+        """Create a reversible function from the interface."""
+
+        # forward function
+        def fw(new: Args, old: Args):
             args, kwargs = new
             return self._freceive(*args, **kwargs)
 
         fw.__name__ = self.__name__
 
-        def rv(new: ArgsType, old: ArgsType):
+        # reverse function
+        def rv(new: Args, old: Args):
             if old is None:
                 return empty
             args, kwargs = old
@@ -155,7 +159,14 @@ class UndoableInterface(Generic[_P, _R, _Args]):
             fn._formatter_rv = self._formatter_rv
 
         fn._map_args = _mapping
+        fn._automerge_rule = self._automerge_rule
         return fn
+
+    @staticmethod
+    def _automerge_rule(args0: dict[str, Any], args1: dict[str, Any]):
+        old = args0["old"]
+        new = args1["new"]
+        return (new, old), {}
 
 
 def _mapping(new, old):
@@ -209,6 +220,8 @@ class UndoableProperty(property):
             old_val = self.fget(obj)
             setattr.__get__(obj)(val, old_val)
 
+        setattr._automerge_rule = self._setter_automerge_rule
+
         # update names and the formatter
 
         return UndoableProperty(
@@ -252,3 +265,10 @@ class UndoableProperty(property):
 
     def _map_args(self, *args, **kwargs):
         return args, kwargs
+
+    @staticmethod
+    def _setter_automerge_rule(obj, args0: dict[str, Any], args1: dict[str, Any]):
+        # obj, val, old_val
+        old = args0["old_val"]
+        new = args1["val"]
+        return (new, old), {}
