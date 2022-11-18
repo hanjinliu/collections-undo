@@ -286,3 +286,41 @@ def test_nested_merge():
     assert state == 0
     mgr.redo()
     assert state == 3
+
+def test_automerge_reversible():
+    class A:
+        mgr = UndoManager()
+
+        def __init__(self):
+            self.x = 0
+
+        def move(self, x):
+            return self._move(self.x, x)
+
+        @mgr.undoable
+        def _move(self, x0, x1):
+            self.x = x1
+
+        @_move.undo_def
+        def _move(self, x0, x1):
+            self.x = x0
+
+        @_move.automerge_rule
+        def _move_rule(self, args0, args1):
+            x0 = args0["x0"]
+            x1 = args1["x1"]
+            return (x0, x1), {}
+
+    a = A()
+    with a.mgr.automerging():
+        a.move(10)
+        a.move(20)
+        a.move(15)
+
+    assert a.x == 15
+    assert a.mgr.stack_lengths == (1, 0)
+    assert a.mgr.stack_undo[0].args == (0, 15)
+    a.mgr.undo()
+    assert a.x == 0
+    a.mgr.redo()
+    assert a.x == 15

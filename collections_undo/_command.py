@@ -111,7 +111,7 @@ class Command(_CommandBase):
             return self.func.format_reverse_call(*self.args, **self.kwargs)
         return self.func.format_forward_call(*self.args, **self.kwargs)
 
-    def automerge(self, cmd: Command) -> Self:
+    def automerge_with(self, cmd: Command) -> Self:
         """Automatically merge the command with the given command."""
         rule = cmd.func._automerge_rule
         if rule is None:

@@ -185,7 +185,7 @@ class UndoManager:
         if self._state.is_automerging and len(self._state.stack_undo) > 0:
             last_cmd = self._state.stack_undo[-1]
             if isinstance(last_cmd, Command):
-                new_cmd = last_cmd.automerge(cmd)
+                new_cmd = last_cmd.automerge_with(cmd)
                 self._state.stack_undo.pop(-1)
             else:
                 new_cmd = cmd
@@ -334,6 +334,11 @@ class UndoManager:
                 self.called.evoke(self._state.stack_undo[-1], CallType.call)
         return None
 
+    def set_merge(self, enabled: bool) -> None:
+        """Enable/disable merging."""
+        self._state.is_merging = bool(enabled)
+        return None
+
     @contextmanager
     def blocked(self):
         """Block new command from being appended to the stack."""
@@ -363,6 +368,11 @@ class UndoManager:
             yield None
         finally:
             self._state.is_automerging = was_automerging
+        return None
+
+    def set_automerge(self, enabled: bool):
+        """Enable/disable auto-merging."""
+        self._state.is_automerging = bool(enabled)
         return None
 
 

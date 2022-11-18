@@ -152,16 +152,23 @@ class ReversibleFunction(Generic[_P, _R, _RR]):
             return self
         _id = id(obj)
         if (out := self._instances.get(_id, None)) is None:
+            # get inverse function
             if self._func_rv is None:
                 inv_func = None
             else:
                 inv_func = self._func_rv.__get__(obj, objtype)
+
+            # register instance
             self._instances[_id] = out = type(self)(
                 func=self._func_fw.__get__(obj, objtype),
                 mgr=self._mgr.__get__(obj, objtype),
                 inverse_func=inv_func,
             )
+
+            # copy name
             out.__name__ = self.__name__
+
+            # get formatters
             if self._formatter_fw is self._formatter_rv:
                 out._formatter_fw = out._formatter_rv = _as_method(
                     self._formatter_fw, obj
@@ -169,8 +176,15 @@ class ReversibleFunction(Generic[_P, _R, _RR]):
             else:
                 out._formatter_fw = _as_method(self._formatter_fw, obj)
                 out._formatter_rv = _as_method(self._formatter_rv, obj)
+
+            # copy argument mapping
             out._map_args = self._map_args
-            out._automerge_rule = self._automerge_rule
+
+            # get automerge rule
+            if self._automerge_rule is not None:
+                out._automerge_rule = _as_method(self._automerge_rule, obj)
+            else:
+                out._automerge_rule = None
         return out
 
     @classmethod
@@ -208,7 +222,7 @@ class ReversibleFunction(Generic[_P, _R, _RR]):
             mgr=self._mgr,
         )
 
-    def set_automerge_rule(self, rule: AutoMergeRuleType):
+    def automerge_rule(self, rule: AutoMergeRuleType):
         self._automerge_rule = rule
         return rule
 
