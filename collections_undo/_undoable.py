@@ -220,7 +220,7 @@ class UndoableProperty(property):
             old_val = self.fget(obj)
             setattr.__get__(obj)(val, old_val)
 
-        setattr._automerge_rule = self._automerge_rule
+        setattr._automerge_rule = self._setter_automerge_rule
 
         # update names and the formatter
 
@@ -267,7 +267,7 @@ class UndoableProperty(property):
         return args, kwargs
 
     @staticmethod
-    def _automerge_rule(obj, args0: dict[str, Any], args1: dict[str, Any]):
+    def _setter_automerge_rule(obj, args0: dict[str, Any], args1: dict[str, Any]):
         # obj, val, old_val
         old = args0["old_val"]
         new = args1["val"]

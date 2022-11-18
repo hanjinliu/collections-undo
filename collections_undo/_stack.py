@@ -186,7 +186,8 @@ class UndoManager:
             last_cmd = self._state.stack_undo[-1]
             if isinstance(last_cmd, Command):
                 new_cmd = last_cmd.automerge_with(cmd)
-                self._state.stack_undo.pop(-1)
+                popped_cmd = self._state.stack_undo.pop(-1)
+                self._state.stack_undo_size -= popped_cmd.size
             else:
                 new_cmd = cmd
             self._state.stack_undo.append(new_cmd)

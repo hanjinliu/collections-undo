@@ -119,7 +119,7 @@ class Command(_CommandBase):
         if self.func is not cmd.func:
             raise ValueError(f"Cannot merge different functions.")
         _args, _kwargs = rule(self.bind_args().arguments, cmd.bind_args().arguments)
-        return self.__class__(self.func, _args, _kwargs)  # TODO: size?
+        return self.__class__(self.func, _args, _kwargs)
 
 
 class CommandGroup(_CommandBase):
