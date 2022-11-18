@@ -3,7 +3,7 @@ from abc import abstractmethod, abstractproperty, ABC
 from operator import mul
 from functools import reduce
 from typing import Iterable, SupportsIndex, TYPE_CHECKING
-from .._stack import UndoManager
+from collections_undo._stack import UndoManager
 
 if TYPE_CHECKING:
     _Shape = tuple[int, ...]

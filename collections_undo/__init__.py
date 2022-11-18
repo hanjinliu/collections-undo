@@ -1,4 +1,4 @@
-__version__ = "0.0.7.dev0"
+__version__ = "0.0.7"
 
 from ._stack import UndoManager
 from ._const import empty

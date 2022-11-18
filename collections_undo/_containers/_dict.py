@@ -2,8 +2,8 @@ from __future__ import annotations
 from abc import abstractmethod
 
 from typing import Hashable, Iterator, Mapping, MutableMapping, TypeVar
-from .._stack import UndoManager
-from .._const import empty
+from collections_undo._stack import UndoManager
+from collections_undo._const import empty
 
 _K = TypeVar("_K", bound=Hashable)
 _V = TypeVar("_V")

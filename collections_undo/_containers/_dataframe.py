@@ -10,7 +10,7 @@ from typing import (
     TypeVar,
     SupportsIndex,
 )
-from .._stack import UndoManager
+from collections_undo._stack import UndoManager
 
 _RV = TypeVar("_RV", bound=Hashable)  # row value
 _CV = TypeVar("_CV", bound=Hashable)  # column value

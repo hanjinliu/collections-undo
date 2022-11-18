@@ -2,7 +2,7 @@ from __future__ import annotations
 from abc import abstractmethod
 
 from typing import Iterable, Iterator, MutableSequence, TypeVar, SupportsIndex
-from .._stack import UndoManager
+from collections_undo._stack import UndoManager
 
 _T = TypeVar("_T")
 

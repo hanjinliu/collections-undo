@@ -2,7 +2,7 @@ from __future__ import annotations
 from abc import abstractmethod
 
 from typing import Hashable, Iterable, Iterator, MutableSet, TypeVar, TYPE_CHECKING
-from .._stack import UndoManager
+from collections_undo._stack import UndoManager
 
 if TYPE_CHECKING:
     from typing_extensions import Self
