@@ -40,7 +40,7 @@ class ManagerState:
         self.maxsize = maxsize
         self.is_blocked = False
         self.is_merging = False
-        self.is_automerging = False
+        self.is_reducing = False
         self.stack_undo: list[_CommandBase] = []
         self.stack_redo: list[_CommandBase] = []
         self.stack_undo_size = 0.0
@@ -182,10 +182,10 @@ class UndoManager:
         if self.is_blocked:
             return None
 
-        if self._state.is_automerging and len(self._state.stack_undo) > 0:
+        if self._state.is_reducing and len(self._state.stack_undo) > 0:
             last_cmd = self._state.stack_undo[-1]
             if isinstance(last_cmd, Command):
-                new_cmd = last_cmd.automerge_with(cmd)
+                new_cmd = last_cmd.reduce_with(cmd)
                 popped_cmd = self._state.stack_undo.pop(-1)
                 self._state.stack_undo_size -= popped_cmd.size
             else:
@@ -361,19 +361,19 @@ class UndoManager:
             raise e
 
     @contextmanager
-    def automerging(self):
-        """Enable auto-merging in this context."""
-        was_automerging = self._state.is_automerging
-        self._state.is_automerging = True
+    def reducing(self):
+        """Enable command reduction in this context."""
+        was_reducing = self._state.is_reducing
+        self._state.is_reducing = True
         try:
             yield None
         finally:
-            self._state.is_automerging = was_automerging
+            self._state.is_reducing = was_reducing
         return None
 
-    def set_automerge(self, enabled: bool):
-        """Enable/disable auto-merging."""
-        self._state.is_automerging = bool(enabled)
+    def set_reducing(self, enabled: bool):
+        """Enable/disable command reduction."""
+        self._state.is_reducing = bool(enabled)
         return None
 
 

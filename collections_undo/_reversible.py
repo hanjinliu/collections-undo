@@ -2,7 +2,7 @@ from __future__ import annotations
 from functools import wraps, partial
 from typing import Any, Callable, TYPE_CHECKING, Iterable, TypeVar, Generic
 from collections_undo._formatter import get_formatter
-from collections_undo._const import FormatterType, AutoMergeRuleType, Args
+from collections_undo._const import FormatterType, ReduceRuleType, Args
 
 if TYPE_CHECKING:
     from typing_extensions import ParamSpec, Self
@@ -67,7 +67,7 @@ class ReversibleFunction(Generic[_P, _R, _RR]):
         self._formatter_rv: FormatterType = self._formatter_fw
 
         self._map_args: Callable[[tuple, dict], Args] = _default_map_args
-        self._automerge_rule: Callable[[dict, dict], tuple[tuple, dict]] | None = None
+        self._reduce_rule: Callable[[dict, dict], tuple[tuple, dict]] | None = None
 
     def __hash__(self) -> int:
         """ReversibleFunction is immutable in public level so use id for hashing."""
@@ -180,11 +180,11 @@ class ReversibleFunction(Generic[_P, _R, _RR]):
             # copy argument mapping
             out._map_args = self._map_args
 
-            # get automerge rule
-            if self._automerge_rule is not None:
-                out._automerge_rule = _as_method(self._automerge_rule, obj)
+            # get reduce rule
+            if self._reduce_rule is not None:
+                out._reduce_rule = _as_method(self._reduce_rule, obj)
             else:
-                out._automerge_rule = None
+                out._reduce_rule = None
         return out
 
     @classmethod
@@ -222,8 +222,8 @@ class ReversibleFunction(Generic[_P, _R, _RR]):
             mgr=self._mgr,
         )
 
-    def automerge_rule(self, rule: AutoMergeRuleType):
-        self._automerge_rule = rule
+    def reduce_rule(self, rule: ReduceRuleType):
+        self._reduce_rule = rule
         return rule
 
 

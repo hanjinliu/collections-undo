@@ -15,4 +15,4 @@ empty = _Empty()
 
 FormatterType = Callable[[Callable, tuple, Dict[str, Any]], str]
 Args = Tuple[Tuple[Any], Dict[str, Any]]
-AutoMergeRuleType = Callable[[Dict[str, Any], Dict[str, Any]], Args]
+ReduceRuleType = Callable[[Dict[str, Any], Dict[str, Any]], Args]

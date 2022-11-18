@@ -287,7 +287,7 @@ def test_nested_merge():
     mgr.redo()
     assert state == 3
 
-def test_automerge_reversible():
+def test_reduce_reversible():
     class A:
         mgr = UndoManager()
 
@@ -305,14 +305,14 @@ def test_automerge_reversible():
         def _move(self, x0, x1):
             self.x = x0
 
-        @_move.automerge_rule
+        @_move.reduce_rule
         def _move_rule(self, args0, args1):
             x0 = args0["x0"]
             x1 = args1["x1"]
             return (x0, x1), {}
 
     a = A()
-    with a.mgr.automerging():
+    with a.mgr.reducing():
         a.move(10)
         a.move(20)
         a.move(15)
@@ -325,7 +325,7 @@ def test_automerge_reversible():
     a.mgr.redo()
     assert a.x == 15
 
-def test_automerge_interface():
+def test_reduce_interface():
     class A:
         mgr = UndoManager()
 
@@ -341,7 +341,7 @@ def test_automerge_interface():
             return (self.x,), {}
 
     a = A()
-    with a.mgr.automerging():
+    with a.mgr.reducing():
         a.move(10)
         a.move(20)
         a.move(15)
@@ -354,7 +354,7 @@ def test_automerge_interface():
     assert a.x == 15
 
 
-def test_automerge_property():
+def test_reduce_property():
     class A:
         mgr = UndoManager()
 
@@ -370,7 +370,7 @@ def test_automerge_property():
             self._x = x
 
     a = A()
-    with a.mgr.automerging():
+    with a.mgr.reducing():
         a.x = 10
         a.x = 20
         a.x = 15
