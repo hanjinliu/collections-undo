@@ -39,6 +39,7 @@ class ManagerState:
         self.measure = measure
         self.maxsize = maxsize
         self.is_blocked = False
+        self.is_merging = False
         self.stack_undo: list[_CommandBase] = []
         self.stack_redo: list[_CommandBase] = []
         self.stack_undo_size = 0.0
@@ -62,7 +63,6 @@ class UndoManager:
         if not callable(measure):
             raise TypeError("measure must be callable")
         self._state = ManagerState(measure, float(maxsize))
-        self._is_merging = False
 
     def __repr__(self) -> str:
         cls_name = type(self).__name__
@@ -305,18 +305,19 @@ class UndoManager:
     @contextmanager
     def merging(self, formatter: Callable | None = None) -> None:
         """Merge all the commands into a single command in this context."""
-        if self._is_merging:
+        if self._state.is_merging:
             yield None
             return None
 
         blocked = self._state.is_blocked
+        merging = self._state.is_merging
         len_before = len(self._state.stack_undo)
-        self._is_merging = True
+        self._state.is_merging = True
         try:
             yield None
         finally:
-            self._is_merging = False
-            if not blocked:
+            self._state.is_merging = merging
+            if not blocked and not merging:
                 len_after = len(self._state.stack_undo)
                 self.merge_commands(len_before, len_after, formatter=formatter)
                 self.called.evoke(self._state.stack_undo[-1], CallType.call)
