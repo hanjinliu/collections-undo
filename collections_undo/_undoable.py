@@ -99,6 +99,7 @@ class UndoableInterface(Generic[_P, _R, _Args]):
 
     @property
     def func(self) -> ReversibleFunction:
+        """Return the reversible function."""
         if self._func is None:
             self._func = self._create_function()
         return self._func
@@ -158,7 +159,14 @@ class UndoableInterface(Generic[_P, _R, _Args]):
             fn._formatter_rv = self._formatter_rv
 
         fn._map_args = _mapping
+        fn._automerge_rule = self._automerge_rule
         return fn
+
+    @staticmethod
+    def _automerge_rule(args0: dict[str, Any], args1: dict[str, Any]):
+        old = args0["old"]
+        new = args1["new"]
+        return (new, old), {}
 
 
 def _mapping(new, old):
@@ -212,6 +220,8 @@ class UndoableProperty(property):
             old_val = self.fget(obj)
             setattr.__get__(obj)(val, old_val)
 
+        setattr._automerge_rule = self._automerge_rule
+
         # update names and the formatter
 
         return UndoableProperty(
@@ -255,3 +265,10 @@ class UndoableProperty(property):
 
     def _map_args(self, *args, **kwargs):
         return args, kwargs
+
+    @staticmethod
+    def _automerge_rule(obj, args0: dict[str, Any], args1: dict[str, Any]):
+        # obj, val, old_val
+        old = args0["old_val"]
+        new = args1["val"]
+        return (new, old), {}

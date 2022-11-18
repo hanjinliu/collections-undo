@@ -324,3 +324,60 @@ def test_automerge_reversible():
     assert a.x == 0
     a.mgr.redo()
     assert a.x == 15
+
+def test_automerge_interface():
+    class A:
+        mgr = UndoManager()
+
+        def __init__(self):
+            self.x = 0
+
+        @mgr.interface
+        def move(self, x):
+            self.x = x
+
+        @move.server
+        def move(self, x):
+            return (self.x,), {}
+
+    a = A()
+    with a.mgr.automerging():
+        a.move(10)
+        a.move(20)
+        a.move(15)
+
+    assert a.x == 15
+    assert a.mgr.stack_lengths == (1, 0)
+    a.mgr.undo()
+    assert a.x == 0
+    a.mgr.redo()
+    assert a.x == 15
+
+
+def test_automerge_property():
+    class A:
+        mgr = UndoManager()
+
+        def __init__(self):
+            self._x = 0
+
+        @mgr.property
+        def x(self):
+            return self._x
+
+        @x.setter
+        def x(self, x):
+            self._x = x
+
+    a = A()
+    with a.mgr.automerging():
+        a.x = 10
+        a.x = 20
+        a.x = 15
+
+    assert a.x == 15
+    assert a.mgr.stack_lengths == (1, 0)
+    a.mgr.undo()
+    assert a.x == 0
+    a.mgr.redo()
+    assert a.x == 15
