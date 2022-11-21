@@ -4,7 +4,7 @@
   <meta charset="utf-8" /><meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
 
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>collections-undo &mdash; collectionsundo 0.0.5 documentation</title>
+  <title>collections-undo &mdash; collectionsundo 0.0.7 documentation</title>
       <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
       <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
   <!--[if lt IE 9]>
@@ -14,7 +14,6 @@
         <script data-url_root="./" id="documentation_options" src="_static/documentation_options.js"></script>
         <script src="_static/jquery.js"></script>
         <script src="_static/underscore.js"></script>
-        <script src="_static/_sphinx_javascript_frameworks_compat.js"></script>
         <script src="_static/doctools.js"></script>
     <script src="_static/js/theme.js"></script>
     <link rel="index" title="Index" href="genindex.html" />
@@ -30,7 +29,7 @@
             <a href="#" class="icon icon-home"> collectionsundo
           </a>
               <div class="version">
-                0.0.5
+                0.0.7
               </div>
 <div role="search">
   <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
@@ -44,6 +43,10 @@
 <li class="toctree-l1"><a class="reference internal" href="main/reversible.html">Forward-reverse Framework</a></li>
 <li class="toctree-l1"><a class="reference internal" href="main/interface.html">Server-receiver Framework</a></li>
 <li class="toctree-l1"><a class="reference internal" href="main/property.html">Property-like Framework</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="main/merge.html">Merge Commands</a></li>
+<li class="toctree-l1"><a class="reference internal" href="main/reduce.html">Reduce Commands</a></li>
 </ul>
 <ul>
 <li class="toctree-l1"><a class="reference internal" href="main/undoable_list.html">List</a></li>
@@ -76,17 +79,17 @@
            <div itemprop="articleBody">
 
   <section id="collections-undo">
-<h1>collections-undo<a class="headerlink" href="#collections-undo" title="Permalink to this heading">¶</a></h1>
+<h1>collections-undo<a class="headerlink" href="#collections-undo" title="Permalink to this headline">¶</a></h1>
 <p><code class="docutils literal notranslate"><span class="pre">collections-undo</span></code> is a general undo/redo framework for Python.</p>
 <p>This module makes it easier to record actions and implement undo/redo.</p>
 <section id="installation">
-<h2>Installation<a class="headerlink" href="#installation" title="Permalink to this heading">¶</a></h2>
+<h2>Installation<a class="headerlink" href="#installation" title="Permalink to this headline">¶</a></h2>
 <div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>pip install -U collections-undo
 </pre></div>
 </div>
 </section>
 <section id="basic-usage">
-<h2>Basic usage<a class="headerlink" href="#basic-usage" title="Permalink to this heading">¶</a></h2>
+<h2>Basic usage<a class="headerlink" href="#basic-usage" title="Permalink to this headline">¶</a></h2>
 <p><code class="docutils literal notranslate"><span class="pre">collections-undo</span></code> uses <code class="docutils literal notranslate"><span class="pre">UndoManager</span></code> for command registration.
 <code class="docutils literal notranslate"><span class="pre">UndoManager</span></code> has several decorators that convert functions into undoable
 ones. The history of function call is recorded in the <code class="docutils literal notranslate"><span class="pre">UndoManager</span></code>.</p>
@@ -103,9 +106,16 @@ ones. The history of function call is recorded in the <code class="docutils lite
 <li class="toctree-l1"><a class="reference internal" href="main/property.html">Property-like Framework</a></li>
 </ul>
 </div>
+<p>You can merge commands into a single undoable command.</p>
+<div class="toctree-wrapper compound">
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="main/merge.html">Merge Commands</a></li>
+<li class="toctree-l1"><a class="reference internal" href="main/reduce.html">Reduce Commands</a></li>
+</ul>
+</div>
 </section>
 <section id="undo-implemented-abstract-classes">
-<h2>Undo-implemented abstract classes<a class="headerlink" href="#undo-implemented-abstract-classes" title="Permalink to this heading">¶</a></h2>
+<h2>Undo-implemented abstract classes<a class="headerlink" href="#undo-implemented-abstract-classes" title="Permalink to this headline">¶</a></h2>
 <p>Python <code class="docutils literal notranslate"><span class="pre">list</span></code>, <code class="docutils literal notranslate"><span class="pre">dict</span></code> and <code class="docutils literal notranslate"><span class="pre">set</span></code> are the fundamental objects of programs.
 If you can attribute all the operations</p>
 <div class="toctree-wrapper compound">
@@ -118,7 +128,7 @@ If you can attribute all the operations</p>
 </section>
 </section>
 <section id="indices-and-tables">
-<h1>Indices and tables<a class="headerlink" href="#indices-and-tables" title="Permalink to this heading">¶</a></h1>
+<h1>Indices and tables<a class="headerlink" href="#indices-and-tables" title="Permalink to this headline">¶</a></h1>
 <ul class="simple">
 <li><p><a class="reference internal" href="genindex.html"><span class="std std-ref">Index</span></a></p></li>
 <li><p><a class="reference internal" href="py-modindex.html"><span class="std std-ref">Module Index</span></a></p></li>

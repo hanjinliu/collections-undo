@@ -39,6 +39,14 @@ Here are three most practically useful decorators listed up below.
    ./main/interface
    ./main/property
 
+You can merge commands into a single undoable command.
+
+.. toctree::
+   :maxdepth: 1
+
+   ./main/merge
+   ./main/reduce
+
 Undo-implemented abstract classes
 ---------------------------------
 

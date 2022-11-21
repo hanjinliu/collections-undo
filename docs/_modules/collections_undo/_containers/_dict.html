@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>collections_undo._containers._dict &mdash; collectionsundo 0.0.5.dev0 documentation</title>
+  <title>collections_undo._containers._dict &mdash; collectionsundo 0.0.7 documentation</title>
       <link rel="stylesheet" href="../../../_static/pygments.css" type="text/css" />
       <link rel="stylesheet" href="../../../_static/css/theme.css" type="text/css" />
   <!--[if lt IE 9]>
@@ -27,7 +27,7 @@
             <a href="../../../index.html" class="icon icon-home"> collectionsundo
           </a>
               <div class="version">
-                0.0.5.dev0
+                0.0.7
               </div>
 <div role="search">
   <form id="rtd-search-form" class="wy-form" action="../../../search.html" method="get">
@@ -41,6 +41,10 @@
 <li class="toctree-l1"><a class="reference internal" href="../../../main/reversible.html">Forward-reverse Framework</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../../main/interface.html">Server-receiver Framework</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../../main/property.html">Property-like Framework</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../main/merge.html">Merge Commands</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../main/reduce.html">Reduce Commands</a></li>
 </ul>
 <ul>
 <li class="toctree-l1"><a class="reference internal" href="../../../main/undoable_list.html">List</a></li>
@@ -63,6 +67,7 @@
   <ul class="wy-breadcrumbs">
       <li><a href="../../../index.html" class="icon icon-home"></a> &raquo;</li>
           <li><a href="../../index.html">Module code</a> &raquo;</li>
+          <li><a href="../../collections_undo.html">collections_undo</a> &raquo;</li>
       <li>collections_undo._containers._dict</li>
       <li class="wy-breadcrumbs-aside">
       </li>
@@ -77,8 +82,8 @@
 <span class="kn">from</span> <span class="nn">abc</span> <span class="kn">import</span> <span class="n">abstractmethod</span>
 
 <span class="kn">from</span> <span class="nn">typing</span> <span class="kn">import</span> <span class="n">Hashable</span><span class="p">,</span> <span class="n">Iterator</span><span class="p">,</span> <span class="n">Mapping</span><span class="p">,</span> <span class="n">MutableMapping</span><span class="p">,</span> <span class="n">TypeVar</span>
-<span class="kn">from</span> <span class="nn">.._stack</span> <span class="kn">import</span> <span class="n">UndoManager</span>
-<span class="kn">from</span> <span class="nn">.._const</span> <span class="kn">import</span> <span class="n">empty</span>
+<span class="kn">from</span> <span class="nn">collections_undo._stack</span> <span class="kn">import</span> <span class="n">UndoManager</span>
+<span class="kn">from</span> <span class="nn">collections_undo._const</span> <span class="kn">import</span> <span class="n">empty</span>
 
 <span class="n">_K</span> <span class="o">=</span> <span class="n">TypeVar</span><span class="p">(</span><span class="s2">&quot;_K&quot;</span><span class="p">,</span> <span class="n">bound</span><span class="o">=</span><span class="n">Hashable</span><span class="p">)</span>
 <span class="n">_V</span> <span class="o">=</span> <span class="n">TypeVar</span><span class="p">(</span><span class="s2">&quot;_V&quot;</span><span class="p">)</span>

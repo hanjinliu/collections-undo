@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Index &mdash; collectionsundo 0.0.5 documentation</title>
+  <title>Index &mdash; collectionsundo 0.0.7 documentation</title>
       <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
       <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
   <!--[if lt IE 9]>
@@ -13,7 +13,6 @@
         <script data-url_root="./" id="documentation_options" src="_static/documentation_options.js"></script>
         <script src="_static/jquery.js"></script>
         <script src="_static/underscore.js"></script>
-        <script src="_static/_sphinx_javascript_frameworks_compat.js"></script>
         <script src="_static/doctools.js"></script>
     <script src="_static/js/theme.js"></script>
     <link rel="index" title="Index" href="#" />
@@ -28,7 +27,7 @@
             <a href="index.html" class="icon icon-home"> collectionsundo
           </a>
               <div class="version">
-                0.0.5
+                0.0.7
               </div>
 <div role="search">
   <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
@@ -42,6 +41,10 @@
 <li class="toctree-l1"><a class="reference internal" href="main/reversible.html">Forward-reverse Framework</a></li>
 <li class="toctree-l1"><a class="reference internal" href="main/interface.html">Server-receiver Framework</a></li>
 <li class="toctree-l1"><a class="reference internal" href="main/property.html">Property-like Framework</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="main/merge.html">Merge Commands</a></li>
+<li class="toctree-l1"><a class="reference internal" href="main/reduce.html">Reduce Commands</a></li>
 </ul>
 <ul>
 <li class="toctree-l1"><a class="reference internal" href="main/undoable_list.html">List</a></li>
@@ -98,13 +101,15 @@
 </li>
       <li><a href="apidoc/collections_undo.html#collections_undo.containers.AbstractUndoableList">AbstractUndoableList (class in collections_undo.containers)</a>
 </li>
-  </ul></td>
-  <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="apidoc/collections_undo.html#collections_undo.containers.AbstractUndoableSet">AbstractUndoableSet (class in collections_undo.containers)</a>
 </li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="apidoc/collections_undo.html#collections_undo.containers.AbstractUndoableSet.add">add() (collections_undo.containers.AbstractUndoableSet method)</a>
 </li>
       <li><a href="apidoc/collections_undo.html#collections_undo.UndoManager.append">append() (collections_undo.UndoManager method)</a>
+</li>
+      <li><a href="apidoc/collections_undo.html#collections_undo.arguments">arguments() (in module collections_undo)</a>
 </li>
   </ul></td>
 </tr></table>
@@ -267,6 +272,8 @@
       </ul></li>
   </ul></td>
   <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="apidoc/collections_undo.html#collections_undo.UndoManager.reducing">reducing() (collections_undo.UndoManager method)</a>
+</li>
       <li><a href="apidoc/collections_undo.html#collections_undo.fmt.register_type">register_type() (in module collections_undo.fmt)</a>
 </li>
       <li><a href="apidoc/collections_undo.html#collections_undo.containers.AbstractUndoableList.reverse">reverse() (collections_undo.containers.AbstractUndoableList method)</a>
@@ -277,12 +284,16 @@
 <h2 id="S">S</h2>
 <table style="width: 100%" class="indextable genindextable"><tr>
   <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="apidoc/collections_undo.html#collections_undo.containers.UndoableList.sort">sort() (collections_undo.containers.UndoableList method)</a>
+      <li><a href="apidoc/collections_undo.html#collections_undo.UndoManager.set_merging">set_merging() (collections_undo.UndoManager method)</a>
 </li>
-      <li><a href="apidoc/collections_undo.html#collections_undo.UndoManager.stack_lengths">stack_lengths (collections_undo.UndoManager property)</a>
+      <li><a href="apidoc/collections_undo.html#collections_undo.UndoManager.set_reducing">set_reducing() (collections_undo.UndoManager method)</a>
+</li>
+      <li><a href="apidoc/collections_undo.html#collections_undo.containers.UndoableList.sort">sort() (collections_undo.containers.UndoableList method)</a>
 </li>
   </ul></td>
   <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="apidoc/collections_undo.html#collections_undo.UndoManager.stack_lengths">stack_lengths (collections_undo.UndoManager property)</a>
+</li>
       <li><a href="apidoc/collections_undo.html#collections_undo.UndoManager.stack_redo">stack_redo (collections_undo.UndoManager property)</a>
 </li>
       <li><a href="apidoc/collections_undo.html#collections_undo.UndoManager.stack_size">stack_size (collections_undo.UndoManager property)</a>
