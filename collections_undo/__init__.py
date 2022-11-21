@@ -7,7 +7,7 @@ from . import abc, fmt, containers
 __all__ = [
     "UndoManager",
     "empty",
-    "args",
+    "arguments",
     "AbstractUndoableDict",
     "AbstractUndoableList",
     "AbstractUndoableSet",
@@ -34,13 +34,13 @@ def __getattr__(name):
     return cls
 
 
-def args(*args, **kwargs):
+def arguments(*args, **kwargs):
     """
     Function that makes returning arguments from a function easier.
 
     Examples
     --------
-    >>> args(1, 2)  # returns (1, 2), {}
-    >>> args(1, 2, a=3)  # returns (1, 2), {'a': 3}
+    >>> arguments(1, 2)  # returns (1, 2), {}
+    >>> arguments(1, 2, a=3)  # returns (1, 2), {'a': 3}
     """
     return args, kwargs

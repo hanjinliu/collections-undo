@@ -1,4 +1,4 @@
-from collections_undo import UndoManager, empty
+from collections_undo import UndoManager, empty, arguments as args
 from unittest.mock import MagicMock
 
 def test_stack_operations():
@@ -218,7 +218,7 @@ def test_group():
 
         @setz.server
         def setz(self, z):
-            return (self.z,), {}
+            return args(self.z,)
 
         def set(self, x, y, z):
             with self.mgr.merging():
@@ -309,7 +309,7 @@ def test_reduce_reversible():
         def _move_rule(self, args0, args1):
             x0 = args0["x0"]
             x1 = args1["x1"]
-            return (x0, x1), {}
+            return args(x0, x1)
 
     a = A()
     with a.mgr.reducing():
@@ -338,7 +338,7 @@ def test_reduce_interface():
 
         @move.server
         def move(self, x):
-            return (self.x,), {}
+            return args(self.x)
 
     a = A()
     with a.mgr.reducing():

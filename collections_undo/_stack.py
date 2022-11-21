@@ -335,7 +335,7 @@ class UndoManager:
                 self.called.evoke(self._state.stack_undo[-1], CallType.call)
         return None
 
-    def set_merge(self, enabled: bool) -> None:
+    def set_merging(self, enabled: bool) -> None:
         """Enable/disable merging."""
         self._state.is_merging = bool(enabled)
         return None
