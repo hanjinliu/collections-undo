@@ -59,7 +59,8 @@ function. Therefore, all you have to do is to define a function that will
 Here's the precise definition of "server" and "receiver".
 
 * **Server** -- a function that returns the current state as a ``tuple`` and a
-  ``dict`` (positional and keyword arguments).
+  ``dict`` (positional and keyword arguments). Using ``args`` function is highly
+  recommended.
 * **Receiver** -- a function that receive arguments and do something (you can consider
   it identical to the forward function in the last section).
 
@@ -76,7 +77,7 @@ example. Note that again, the definition is very similar to ``property``.
 
 .. code-block:: python
 
-    from collections_undo import UndoManager
+    from collections_undo import UndoManager, args
 
     class A:
         mgr = UndoManager()
@@ -92,7 +93,7 @@ example. Note that again, the definition is very similar to ``property``.
 
         @set_value.server  # define the server
         def set_value(self, x):  # x is useless here
-            return (self.x,), {}
+            return args(self.x)
 
 When a value is set
 

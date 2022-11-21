@@ -1,7 +1,7 @@
 from __future__ import annotations
 from abc import ABC, abstractmethod
 from functools import lru_cache
-from typing import Any, Callable, Iterable, Iterator, TYPE_CHECKING
+from typing import Any, Callable, Iterable, Iterator, TYPE_CHECKING, Mapping
 import inspect
 
 from collections_undo._reversible import ReversibleFunction
@@ -118,7 +118,10 @@ class Command(_CommandBase):
             raise ValueError(f"Automerge rule is not defined for {cmd.func}.")
         if self.func is not cmd.func:
             raise ValueError(f"Cannot merge different functions.")
-        _args, _kwargs = rule(self.bind_args().arguments, cmd.bind_args().arguments)
+        _args, _kwargs = rule(
+            Arguments(self.bind_args().arguments),
+            Arguments(cmd.bind_args().arguments),
+        )
         return self.__class__(self.func, _args, _kwargs)
 
 
@@ -194,3 +197,36 @@ class CommandGroup(_CommandBase):
 
     def _format_default(self) -> str:
         return "\n".join(cmd.format() for cmd in self)
+
+
+class Arguments(Mapping[str, Any]):
+    def __init__(self, *args, **kwargs):
+        self._dict = dict(*args, **kwargs)
+        self._keys = list(self._dict.keys())
+
+    def __repr__(self):
+        d = repr(self._dict)
+        return f"Arguments({d[1:-1]})"
+
+    def __getitem__(self, key: str | int) -> Any:
+        if not isinstance(key, str):
+            key = self._keys[key]
+        return self._dict[key]
+
+    def __getattr__(self, key: str):
+        return self.__getitem__(key)
+
+    def __iter__(self):
+        return iter(self._keys)
+
+    def __len__(self):
+        return len(self._keys)
+
+    def keys(self):
+        return self._keys
+
+    def values(self):
+        return self._dict.values()
+
+    def items(self):
+        return self._dict.items()
