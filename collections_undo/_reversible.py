@@ -3,15 +3,13 @@ from functools import wraps, partial
 from typing import Any, Callable, TYPE_CHECKING, Iterable, TypeVar, Generic
 from collections_undo._formatter import get_formatter
 from collections_undo._const import FormatterType, ReduceRuleType, Args
+from typing_extensions import ParamSpec
 
 if TYPE_CHECKING:
-    from typing_extensions import ParamSpec, Self
-    from ._stack import UndoManager
+    from collections_undo._stack import UndoManager
+    from typing_extensions import Self
 
-    _P = ParamSpec("_P")
-else:
-    _P = TypeVar("_P")
-
+_P = ParamSpec("_P")
 _R = TypeVar("_R")
 _RR = TypeVar("_RR")
 

@@ -1,19 +1,19 @@
 from __future__ import annotations
 from functools import partial, wraps
 from typing import Any, Callable, TYPE_CHECKING, Generic, Literal, TypeVar
+from typing_extensions import ParamSpec
+
 from collections_undo._reversible import ReversibleFunction
 from collections_undo._const import empty, FormatterType, Args
 
 if TYPE_CHECKING:
-    from typing_extensions import ParamSpec
     from collections_undo._stack import UndoManager
 
-    _P = ParamSpec("_P")
     _Args = TypeVar("_Args", bound=Args)
 else:
-    _P = TypeVar("_P")
     _Args = TypeVar("_Args")
 
+_P = ParamSpec("_P")
 _R = TypeVar("_R")
 
 
