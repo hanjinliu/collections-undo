@@ -232,7 +232,7 @@ class UndoManager:
     @overload
     def undoable(
         self,
-        f: Literal[None],
+        f: Literal[None] = None,
         name: str | None = None,
     ) -> Callable[[Callable[_P, _R]], ReversibleFunction[_P, _R, Any]] | Callable[
         [property], UndoableProperty

@@ -1,4 +1,4 @@
-__version__ = "0.0.7"
+__version__ = "0.0.8"
 
 from ._stack import UndoManager
 from ._const import empty
@@ -8,30 +8,10 @@ __all__ = [
     "UndoManager",
     "empty",
     "arguments",
-    "AbstractUndoableDict",
-    "AbstractUndoableList",
-    "AbstractUndoableSet",
-    "UndoableDict",
-    "UndoableList",
-    "UndoableSet",
     "abc",
     "containers",
     "fmt",
 ]
-
-
-def __getattr__(name):
-    cls = getattr(containers, name, None)
-    if cls is None:
-        raise AttributeError(f"module 'collections_undo' has no attribute '{name}'")
-    import warnings
-
-    warnings.warn(
-        f"Importing {name} from 'collections_undo' is deprecated. Import it from "
-        "'collections_undo.containers' instead.",
-        DeprecationWarning,
-    )
-    return cls
 
 
 def arguments(*args, **kwargs):

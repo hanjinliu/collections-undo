@@ -174,22 +174,22 @@ def _mapping(new, old):
     return args, kwargs
 
 
-class UndoableProperty(property):
+class UndoableProperty(property, Generic[_R]):
     """A property class implemented with undo."""
 
     def __init__(
         self,
-        fget: Callable[[Any], Any] | None = None,
-        fset: Callable[[Any], Any] | None = None,
+        fget: Callable[[Any], _R] | None = None,
+        fset: Callable[[Any, _R], None] | None = None,
         fdel: Literal[None] = None,
         doc: str | None = None,
         *,
-        mgr: UndoManager = None,
+        mgr: UndoManager | None = None,
     ):
         self._mgr = mgr
         super().__init__(fget, fset, fdel, doc)
 
-    def getter(self, fget: Callable[[Any], Any], /) -> UndoableProperty:
+    def getter(self, fget: Callable[[Any], _R], /) -> UndoableProperty[_R]:
         """
         Set the getter function.
 
@@ -204,7 +204,7 @@ class UndoableProperty(property):
             mgr=self._mgr,
         )
 
-    def setter(self, fset: Callable[[Any, Any], None], /) -> UndoableProperty:
+    def setter(self, fset: Callable[[Any, _R], None], /) -> UndoableProperty[_R]:
         """Define the undoable setter function."""
 
         @self._mgr.undoable
@@ -232,7 +232,7 @@ class UndoableProperty(property):
             mgr=self._mgr,
         )
 
-    def deleter(self, fdel: Callable[[Any], None], /) -> UndoableProperty:
+    def deleter(self, fdel: Callable[[Any], None], /) -> UndoableProperty[_R]:
         """Define the undoable deleter function."""
 
         @self._mgr.undoable

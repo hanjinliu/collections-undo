@@ -104,13 +104,13 @@ class AbstractUndoableDict(MutableMapping[_K, _V]):
         return self._update(values, old_values)
 
     @_mgr.undoable(name="update")
-    def _update(self, values: dict[_K, _V], old_values: dict[_K, _V]):
+    def _update(self, values: dict[_K, _V], old_values: dict[_K, _V]) -> None:
         for key, value in values.items():
             self._raw_setitem(key, value)
         return None
 
     @_update.undo_def
-    def _update(self, values: dict[_K, _V], old_values: dict[_K, _V]):
+    def _update(self, values: dict[_K, _V], old_values: dict[_K, _V]) -> None:
         for key, value in old_values.items():
             if value is empty:
                 self._raw_delitem(key)
