@@ -1,6 +1,6 @@
 from __future__ import annotations
 from functools import wraps, partial
-from typing import Any, Callable, TYPE_CHECKING, Iterable, TypeVar, Generic, overload
+from typing import Any, Callable, Generic, Iterable, TYPE_CHECKING, TypeVar
 from collections_undo._formatter import get_formatter
 from collections_undo._const import FormatterType, ReduceRuleType, Args
 from typing_extensions import ParamSpec
@@ -92,7 +92,6 @@ class ReversibleFunction(Generic[_P, _R, _RR]):
         """Return the function ID."""
         return self._function_id
 
-    @overload
     def undo_def(self, undo: Callable[_P, _R0]) -> ReversibleFunction[_P, _R, _R0]:
         """Define inverse function and return a new object."""
         return self.__newlike__(
