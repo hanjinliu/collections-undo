@@ -1,6 +1,6 @@
 from __future__ import annotations
 from functools import partial, wraps
-from typing import Any, Callable, TYPE_CHECKING, Generic, Literal, TypeVar
+from typing import Any, Callable, TYPE_CHECKING, Generator, Generic, Literal, TypeVar
 from typing_extensions import ParamSpec
 
 from collections_undo._reversible import ReversibleFunction
@@ -15,6 +15,7 @@ else:
 
 _P = ParamSpec("_P")
 _R = TypeVar("_R")
+_RR = TypeVar("_RR")
 
 
 def _dummy_func(*args, **kwargs) -> None:
@@ -98,7 +99,7 @@ class UndoableInterface(Generic[_P, _R, _Args]):
         return formatter
 
     @property
-    def func(self) -> ReversibleFunction:
+    def func(self) -> ReversibleFunction[_P, _R, _R]:
         """Return the reversible function."""
         if self._func is None:
             self._func = self._create_function()
@@ -133,7 +134,7 @@ class UndoableInterface(Generic[_P, _R, _Args]):
     def __repr__(self) -> str:
         return f"{type(self).__name__}<{self._freceive!r}>"
 
-    def _create_function(self) -> ReversibleFunction:
+    def _create_function(self) -> ReversibleFunction[_P, _R, _R]:
         """Create a reversible function from the interface."""
 
         # forward function
@@ -272,3 +273,101 @@ class UndoableProperty(property, Generic[_R]):
         old = args0["old_val"]
         new = args1["val"]
         return (new, old), {}
+
+
+class UndoableGenerator(Generic[_P, _R, _RR]):
+    def __init__(
+        self,
+        func: Callable[_P, Generator[_R, None, _RR]],
+        mgr: UndoManager = None,
+    ):
+        self._gen_func = func
+        self._func: ReversibleFunction[_P, _R, _RR] | None = None
+        self._current_generator = None
+        self._formatter_fw = None
+        self._formatter_rv = None
+        self._mgr = mgr
+        self._instances: dict[int, UndoableGenerator] = {}
+        wraps(func)(self)
+
+    @property
+    def func(self) -> ReversibleFunction[_P, _R, _RR]:
+        """Return the reversible function."""
+        if self._func is None:
+            self._func = self._create_function()
+        return self._func
+
+    def __call__(self, *args: _P.args, **kwargs: _P.kwargs) -> _R:
+        with self._mgr.blocked():
+            out = self.func(*args, **kwargs)
+        self._mgr._append_command(self.func, args, kwargs)
+        return out
+
+    def __repr__(self) -> str:
+        return f"{type(self).__name__}<{self._gen_func!r}>"
+
+    def __set_name__(self, owner: type, name: str) -> None:
+        self.__name__ = name
+
+    def __get__(self, obj, objtype=None) -> UndoableGenerator:
+        if obj is None:
+            return self
+        _id = id(obj)
+        if (out := self._instances.get(_id, None)) is None:
+            self._instances[_id] = out = UndoableGenerator(
+                self._gen_func.__get__(obj, objtype),
+                mgr=self._mgr.__get__(obj, objtype),
+            )
+            if self._formatter_fw is not None:
+                out._formatter_fw = partial(self._formatter_fw, obj)
+            if self._formatter_rv is not None:
+                out._formatter_rv = partial(self._formatter_rv, obj)
+        return out
+
+    def _create_function(self) -> ReversibleFunction[_P, _R, _RR]:
+        """Create a reversible function from the interface."""
+
+        # forward function
+        def fw(*args, **kwargs):
+            self._current_generator = self._gen_func(*args, **kwargs)
+            return next(self._current_generator)
+
+        fw.__name__ = self.__name__
+
+        # reverse function
+        def rv(*args, **kwargs):
+            try:
+                next(self._current_generator)
+            except StopIteration:
+                return None
+            else:
+                raise RuntimeError("generator didn't stop")
+
+        fn = ReversibleFunction(fw, rv, mgr=self._mgr)
+        fn.__name__ = self.__name__
+
+        if self._formatter_fw is not None:
+            fn._formatter_fw = self._formatter_fw
+        if self._formatter_rv is not None:
+            fn._formatter_rv = self._formatter_rv
+        return fn
+
+    def set_formatter(
+        self,
+        formatter: _Fmt,
+        /,
+    ) -> _Fmt:
+        if not callable(formatter):
+            raise TypeError(f"{formatter!r} is not callable")
+        self._formatter_fw = formatter
+        return formatter
+
+    def set_formatter_inv(
+        self,
+        formatter: _Fmt,
+        /,
+    ) -> _Fmt:
+        if not callable(formatter):
+            raise TypeError(f"{formatter!r} is not callable")
+        self._formatter_rv = formatter
+        return formatter

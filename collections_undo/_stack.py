@@ -11,7 +11,7 @@ from typing import (
 from functools import wraps
 
 from ._reversible import ReversibleFunction
-from ._undoable import UndoableInterface, UndoableProperty
+from ._undoable import UndoableInterface, UndoableProperty, UndoableGenerator
 from ._command import Command, _CommandBase
 from ._const import empty
 from ._stack_utils import LengthPair, CallbackList, CallType
@@ -207,10 +207,15 @@ class UndoManager:
             self._state.stack_undo_size -= cmd.size
         return None
 
-    def _append_command(self, cmd, *args, **kwargs):
-        cmd = Command(func=cmd, args=args, kwargs=kwargs)
-        cmd.size = self._state.measure(*args, **kwargs)
-        return self.append(cmd)
+    def _append_command(
+        self,
+        fn: ReversibleFunction[_P, Any, Any],
+        *args: _P.args,
+        **kwargs: _P.kwargs,
+    ) -> None:
+        _cmd = Command(func=fn, args=args, kwargs=kwargs)
+        _cmd.size = self._state.measure(*args, **kwargs)
+        return self.append(_cmd)
 
     def clear(self) -> None:
         """Clear the stack."""
@@ -276,11 +281,7 @@ class UndoManager:
     ) -> Callable[[Callable[_P, _R]], UndoableInterface[_P, _R, Any]]:
         ...
 
-    def interface(
-        self,
-        func: Callable | None = None,
-        name: str | None = None,
-    ) -> UndoableInterface:
+    def interface(self, func=None, name=None) -> UndoableInterface:
         """Decorator for undoable setter function construction."""
 
         def _wrapper(f):
@@ -288,6 +289,19 @@ class UndoManager:
             if name is not None:
                 itf.__name__ = name
             return itf
+
+        return _wrapper if func is None else _wrapper(func)
+
+    def contexted(
+        self,
+        func=None,
+        name=None,
+    ):
+        def _wrapper(f):
+            gen = UndoableGenerator(f, mgr=self)
+            if name is not None:
+                gen.__name__ = name
+            return gen
 
         return _wrapper if func is None else _wrapper(func)
 
