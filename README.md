@@ -1,3 +1,6 @@
+[![Python package index download statistics](https://img.shields.io/pypi/dm/collections-undo.svg)](https://pypistats.org/packages/collections-undo)
+[![PyPI version](https://badge.fury.io/py/collections-undo.svg)](https://badge.fury.io/py/collections-undo)
+
 # collections-undo
 
 General undo/redo implementation in Python.
@@ -5,7 +8,7 @@ General undo/redo implementation in Python.
 
 ### Installation
 
-```
+```shell
 pip install -U collections-undo
 ```
 
