@@ -381,3 +381,32 @@ def test_reduce_property():
     assert a.x == 0
     a.mgr.redo()
     assert a.x == 15
+
+def test_generator():
+    class A:
+        mgr = UndoManager()
+
+        def __init__(self) -> None:
+            self._state = 0
+
+        @mgr.contexted
+        def set_state(self, state: int):
+            old = self._state
+            self._state = state
+            yield
+            self._state = old
+
+    a = A()
+    assert a._state == 0
+    a.set_state(-1)
+    assert a._state == -1
+    a.set_state(1)
+    assert a._state == 1
+    a.mgr.undo()
+    assert a._state == -1
+    a.mgr.undo()
+    assert a._state == 0
+    a.mgr.redo()
+    assert a._state == -1
+    a.mgr.redo()
+    assert a._state == 1

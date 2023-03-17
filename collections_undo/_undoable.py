@@ -283,7 +283,7 @@ class UndoableGenerator(Generic[_P, _R, _RR]):
     ):
         self._gen_func = func
         self._func: ReversibleFunction[_P, _R, _RR] | None = None
-        self._current_generator = None
+        self._generator_stack: list[Generator[_P, _R, _RR]] = []
         self._formatter_fw = None
         self._formatter_rv = None
         self._mgr = mgr
@@ -300,7 +300,7 @@ class UndoableGenerator(Generic[_P, _R, _RR]):
     def __call__(self, *args: _P.args, **kwargs: _P.kwargs) -> _R:
         with self._mgr.blocked():
             out = self.func(*args, **kwargs)
-        self._mgr._append_command(self.func, args, kwargs)
+        self._mgr._append_command(self.func, *args, **kwargs)
         return out
 
     def __repr__(self) -> str:
@@ -329,17 +329,22 @@ class UndoableGenerator(Generic[_P, _R, _RR]):
 
         # forward function
         def fw(*args, **kwargs):
-            self._current_generator = self._gen_func(*args, **kwargs)
-            return next(self._current_generator)
+            gen = self._gen_func(*args, **kwargs)
+            self._generator_stack.append(gen)
+            return next(gen)
 
         fw.__name__ = self.__name__
 
         # reverse function
         def rv(*args, **kwargs):
             try:
-                next(self._current_generator)
-            except StopIteration:
-                return None
+                gen = self._generator_stack.pop(-1)
+            except IndexError:
+                raise RuntimeError("generator stack is empty") from None
+            try:
+                next(gen)
+            except StopIteration as e:
+                return e.value
             else:
                 raise RuntimeError("generator didn't stop")
 
