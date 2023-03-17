@@ -1,7 +1,7 @@
 from __future__ import annotations
 from functools import partial, wraps
 from typing import Any, Callable, TYPE_CHECKING, Generator, Generic, Literal, TypeVar
-from typing_extensions import ParamSpec
+from typing_extensions import ParamSpec, TypeGuard
 
 from collections_undo._reversible import ReversibleFunction
 from collections_undo._const import empty, FormatterType, Args
@@ -376,3 +376,15 @@ class UndoableGenerator(Generic[_P, _R, _RR]):
             raise TypeError(f"{formatter!r} is not callable")
         self._formatter_rv = formatter
         return formatter
+
+
+def is_undoable(
+    obj: Any,
+) -> TypeGuard[
+    ReversibleFunction | UndoableInterface | UndoableProperty | UndoableGenerator
+]:
+    """Return True if the object is undoable."""
+    return isinstance(
+        obj,
+        (ReversibleFunction, UndoableInterface, UndoableProperty, UndoableGenerator),
+    )
