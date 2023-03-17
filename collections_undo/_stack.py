@@ -270,7 +270,7 @@ class UndoManager:
     @overload
     def interface(
         self, func: Callable[_P, _R], name: str | None = None
-    ) -> UndoableInterface[_P, _R, Any]:
+    ) -> UndoableInterface[_P, _R, _R]:
         ...
 
     @overload
@@ -278,7 +278,7 @@ class UndoManager:
         self,
         func: Literal[None],
         name: str | None = None,
-    ) -> Callable[[Callable[_P, _R]], UndoableInterface[_P, _R, Any]]:
+    ) -> Callable[[Callable[_P, _R]], UndoableInterface[_P, _R, _R]]:
         ...
 
     def interface(self, func=None, name=None) -> UndoableInterface:
@@ -292,11 +292,21 @@ class UndoManager:
 
         return _wrapper if func is None else _wrapper(func)
 
+    @overload
     def contexted(
-        self,
-        func=None,
-        name=None,
-    ):
+        self, func: Callable[_P, _R], name: str | None = None
+    ) -> UndoableGenerator[_P, _R, _R]:
+        ...
+
+    @overload
+    def contexted(
+        self, func: Literal[None], name: str | None = None
+    ) -> Callable[[Callable[_P, _R]], UndoableGenerator[_P, _R, _R]]:
+        ...
+
+    def contexted(self, func=None, name=None):
+        """Decorator for undoable generator construction."""
+
         def _wrapper(f):
             gen = UndoableGenerator(f, mgr=self)
             if name is not None:

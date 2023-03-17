@@ -30,7 +30,7 @@ ones. The history of function call is recorded in the ``UndoManager``.
 
    mgr = UndoManager()
 
-Here are three most practically useful decorators listed up below.
+Here are some most practically useful decorators listed up below.
 
 .. toctree::
    :maxdepth: 1
@@ -38,6 +38,7 @@ Here are three most practically useful decorators listed up below.
    ./main/reversible
    ./main/interface
    ./main/property
+   ./main/generator
 
 You can merge commands into a single undoable command.
 
