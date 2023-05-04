@@ -410,3 +410,7 @@ def test_generator():
     assert a._state == -1
     a.mgr.redo()
     assert a._state == 1
+    a.mgr.undo()
+    assert a._state == -1
+    a.mgr.redo()
+    assert a._state == 1
