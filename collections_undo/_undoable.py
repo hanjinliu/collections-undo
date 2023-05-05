@@ -1,10 +1,12 @@
 from __future__ import annotations
+
 from functools import partial, wraps
-from typing import Any, Callable, TYPE_CHECKING, Generator, Generic, Literal, TypeVar
+from typing import TYPE_CHECKING, Any, Callable, Generator, Generic, Literal, TypeVar
+
 from typing_extensions import ParamSpec, TypeGuard
 
+from collections_undo._const import Args, FormatterType, empty
 from collections_undo._reversible import ReversibleFunction
-from collections_undo._const import empty, FormatterType, Args
 
 if TYPE_CHECKING:
     from collections_undo._stack import UndoManager
@@ -209,19 +211,19 @@ class UndoableProperty(property, Generic[_R]):
         """Define the undoable setter function."""
 
         @self._mgr.undoable
-        def setattr(obj, val, old_val):
+        def _setattr(obj, val, old_val):
             fset(obj, val)
 
-        @setattr.undo_def
-        def setattr(obj, val, old_val):
+        @_setattr.undo_def
+        def _setattr(obj, val, old_val):
             fset(obj, old_val)
 
         @wraps(fset)
         def fset_ext(obj, val):
             old_val = self.fget(obj)
-            setattr.__get__(obj)(val, old_val)
+            _setattr.__get__(obj)(val, old_val)
 
-        setattr._reduce_rule = self._setter_reduce_rule
+        _setattr._reduce_rule = self._setter_reduce_rule
 
         # update names and the formatter
 
@@ -237,17 +239,17 @@ class UndoableProperty(property, Generic[_R]):
         """Define the undoable deleter function."""
 
         @self._mgr.undoable
-        def delattr(obj, old_val):
+        def _delattr(obj, old_val):
             fdel(obj)
 
-        @delattr.undo_def
-        def delattr(obj, old_val):
+        @_delattr.undo_def
+        def _delattr(obj, old_val):
             self.fset(obj, old_val)
 
         @wraps(fdel)
         def fdel_ext(obj):
             old_val = self.fget(obj)
-            delattr.__get__(obj)(old_val)
+            _delattr.__get__(obj)(old_val)
 
         # update names and the formatter
 
@@ -276,6 +278,16 @@ class UndoableProperty(property, Generic[_R]):
 
 
 class UndoableGenerator(Generic[_P, _R, _RR]):
+    """
+    An undoable object defined by a generator function.
+
+    Input function must be a generator function with single yield statement.
+    >>> def func(x):
+    ...     # do something
+    ...     yield
+    ...     # undo
+    """
+
     def __init__(
         self,
         func: Callable[_P, Generator[_R, None, _RR]],

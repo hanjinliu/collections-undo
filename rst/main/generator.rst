@@ -18,7 +18,7 @@ Following example shows how to define an undoable setter.
         def __init__(self):
         self._state = 0
 
-        @mgr.contexted
+        @mgr.undoable_gen
         def set_state(self, x):
             # do-statement before yield
             old = x

@@ -1,26 +1,29 @@
 from __future__ import annotations
+
 from contextlib import contextmanager
+from functools import wraps
 from typing import (
+    TYPE_CHECKING,
     Any,
     Callable,
+    Generator,
     Literal,
-    TYPE_CHECKING,
     TypeVar,
     overload,
 )
-from functools import wraps
 
-from ._reversible import ReversibleFunction
-from ._undoable import UndoableInterface, UndoableProperty, UndoableGenerator
 from ._command import Command, _CommandBase
 from ._const import empty
-from ._stack_utils import LengthPair, CallbackList, CallType
+from ._reversible import ReversibleFunction
+from ._stack_utils import CallbackList, CallType, LengthPair
+from ._undoable import UndoableGenerator, UndoableInterface, UndoableProperty
 
 if TYPE_CHECKING:
-    from typing_extensions import Self, ParamSpec
+    from typing_extensions import ParamSpec, Self
 
     _P = ParamSpec("_P")
     _R = TypeVar("_R")
+    _RR = TypeVar("_RR")
 
 _F = TypeVar("_F", bound=Callable)
 
@@ -161,7 +164,7 @@ class UndoManager:
 
     @property
     def stack_lengths(self) -> LengthPair:
-        """Return length of undo and redo stack"""
+        """Return length of undo and redo stack."""
         return LengthPair(
             undo=len(self._state.stack_undo),
             redo=len(self._state.stack_redo),
@@ -169,7 +172,7 @@ class UndoManager:
 
     @property
     def stack_size(self) -> float:
-        """Return size of undo and redo stack"""
+        """Return size of undo and redo stack."""
         return self._state.stack_undo_size + self._state.stack_redo_size
 
     @property
@@ -239,9 +242,10 @@ class UndoManager:
         self,
         f: Literal[None] = None,
         name: str | None = None,
-    ) -> Callable[[Callable[_P, _R]], ReversibleFunction[_P, _R, Any]] | Callable[
-        [property], UndoableProperty
-    ]:
+    ) -> (
+        Callable[[Callable[_P, _R]], ReversibleFunction[_P, _R, Any]]
+        | Callable[[property], UndoableProperty]
+    ):
         ...
 
     def undoable(self, f=None, name=None):
@@ -293,18 +297,20 @@ class UndoManager:
         return _wrapper if func is None else _wrapper(func)
 
     @overload
-    def contexted(
-        self, func: Callable[_P, _R], name: str | None = None
-    ) -> UndoableGenerator[_P, _R, _R]:
+    def undoable_gen(
+        self, func: Callable[_P, Generator[_R, None, _RR]], name: str | None = None
+    ) -> UndoableGenerator[_P, _R, _RR]:
         ...
 
     @overload
-    def contexted(
+    def undoable_gen(
         self, func: Literal[None], name: str | None = None
-    ) -> Callable[[Callable[_P, _R]], UndoableGenerator[_P, _R, _R]]:
+    ) -> Callable[
+        [Callable[_P, Generator[_R, None, _RR]]], UndoableGenerator[_P, _R, _RR]
+    ]:
         ...
 
-    def contexted(self, func=None, name=None):
+    def undoable_gen(self, func=None, name=None):
         """Decorator for undoable generator construction."""
 
         def _wrapper(f):
@@ -315,19 +321,21 @@ class UndoManager:
 
         return _wrapper if func is None else _wrapper(func)
 
-    def undef(self, undef: _F) -> _F:
+    def irreversible(self, f: _F) -> _F:
         """
-        Mark an function as an undo-undefined function.
+        Mark an function as an irreversible function.
 
-        When marked function is called, undo/redo stack get cleared.
+        When marked function is called, undo/redo stack gets cleared.
         """
 
-        @wraps(undef)
-        def _undef(*args, **kwargs):
+        @wraps(f)
+        def _irreversible(*args, **kwargs):
             self.clear()
-            return undef(*args, **kwargs)
+            return f(*args, **kwargs)
 
-        return _undef
+        return _irreversible
+
+    undef = irreversible  # backward compatible alias
 
     def merge_commands(
         self, start: int, stop: int, formatter: Callable | None = None

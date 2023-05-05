@@ -1,5 +1,8 @@
-from collections_undo import UndoManager, empty, arguments as args
 from unittest.mock import MagicMock
+
+from collections_undo import UndoManager, empty
+from collections_undo import arguments as args
+
 
 def test_stack_operations():
     mock = MagicMock()
@@ -59,6 +62,7 @@ def test_stack_operations():
     assert mgr.stack_lengths == (2, 0)
     mock.assert_not_called()
 
+
 def test_size():
     def nargs(*args, **kwargs):
         return len(args) + len(kwargs)
@@ -93,6 +97,7 @@ def test_size():
     assert mgr.stack_size == 9
     assert mgr.stack_lengths == (3, 0)
 
+
 def test_repr():
     mgr = UndoManager()
 
@@ -111,12 +116,12 @@ def test_repr():
     [mgr.undo() for _ in range(12)]
     repr(mgr)
 
+
 def test_pre_link():
     mgr0 = UndoManager()
     mgr1 = UndoManager()
 
     mgr0.link(mgr1)
-
 
     @mgr0.undoable
     def a():
@@ -158,6 +163,7 @@ def test_post_link():
     assert mgr0.stack_lengths == (0, 1)
     assert mgr1.stack_lengths == (0, 1)
 
+
 def test_link_blocked():
     mgr0 = UndoManager()
     mgr1 = UndoManager()
@@ -178,12 +184,12 @@ def test_link_blocked():
     assert mgr0.stack_lengths == (0, 0)
     assert mgr1.stack_lengths == (0, 0)
 
-
     with mgr1.blocked():
         a()
 
     assert mgr0.stack_lengths == (0, 0)
     assert mgr1.stack_lengths == (0, 0)
+
 
 def test_group():
     class A:
@@ -218,7 +224,9 @@ def test_group():
 
         @setz.server
         def setz(self, z):
-            return args(self.z,)
+            return args(
+                self.z,
+            )
 
         def set(self, x, y, z):
             with self.mgr.merging():
@@ -233,6 +241,7 @@ def test_group():
     a.mgr.undo()
     assert a.mgr.stack_lengths == (0, 1)
     assert a._hist[-3:] == ["z", "y", "x"]
+
 
 def test_blocked():
     mgr = UndoManager()
@@ -260,6 +269,7 @@ def test_blocked():
     d()
     assert mgr.stack_lengths == (2, 0)
 
+
 def test_nested_merge():
     mgr = UndoManager()
     state = 0
@@ -286,6 +296,7 @@ def test_nested_merge():
     assert state == 0
     mgr.redo()
     assert state == 3
+
 
 def test_reduce_reversible():
     class A:
@@ -324,6 +335,7 @@ def test_reduce_reversible():
     assert a.x == 0
     a.mgr.redo()
     assert a.x == 15
+
 
 def test_reduce_interface():
     class A:
@@ -382,6 +394,7 @@ def test_reduce_property():
     a.mgr.redo()
     assert a.x == 15
 
+
 def test_generator():
     class A:
         mgr = UndoManager()
@@ -389,7 +402,7 @@ def test_generator():
         def __init__(self) -> None:
             self._state = 0
 
-        @mgr.contexted
+        @mgr.undoable_gen
         def set_state(self, state: int):
             old = self._state
             self._state = state
