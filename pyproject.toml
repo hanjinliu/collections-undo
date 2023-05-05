@@ -1,0 +1,73 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "collections-undo"
+classifiers = [
+    "Intended Audience :: Developers",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python",
+    "Programming Language :: Python :: 3 :: Only",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+]
+dynamic = ["version"]
+description = "General undo/redo framework for Python"
+readme = "README.md"
+license = { file = "LICENSE"}
+requires-python = ">=3.8"
+authors = [
+    { name = "Hanjin Liu", email = "liuhanjin-sc@g.ecc.u-tokyo.ac.jp" },
+]
+dependencies = [
+    "typing_extensions>=4.5.0",
+]
+
+[project.urls]
+Download = "https://github.com/hanjinliu/collections-undo"
+
+[tool.hatch.version]
+path = "collections_undo/__init__.py"
+
+[tool.hatch.build.targets.sdist]
+include = [
+    "/collections_undo",
+]
+
+[tool.isort]
+profile = "black"
+src_paths = ["collections_undo", "tests"]
+
+[tool.ruff]
+line-length = 88
+target-version = "py38"
+src = ["collections_undo", "tests"]
+select = [
+    "E",  # style errors
+    "F",  # flakes
+    "D",  # pydocstyle
+    "I",  # isort
+    "UP", # pyupgrade
+    "C",    # flake8-comprehensions
+    "B",    # flake8-bugbear
+    "A001", # flake8-builtins
+    "RUF",  # ruff-specific rules
+]
+ignore = [
+    "D100", # Missing docstring in public module
+    "D107", # Missing docstring in __init__
+    "D203", # 1 blank line required before class docstring
+    "D212", # Multi-line docstring summary should start at the first line
+    "D213", # Multi-line docstring summary should start at the second line
+    "D401", # First line should be in imperative mood
+    "D413", # Missing blank line after last section
+    "D416", # Section name should end with a colon
+    "C901", # Function is too complex
+]
+
+[tool.ruff.per-file-ignores]
+"tests/*.py" = ["D", "E501"]
+"setup.py" = ["F821"]
