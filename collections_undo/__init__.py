@@ -1,12 +1,13 @@
 __version__ = "0.0.8"
 
-from ._stack import UndoManager
+from . import abc, containers, fmt
 from ._const import empty
+from ._stack import UndoManager, get_undo_manager
 from ._undoable import is_undoable
-from . import abc, fmt, containers
 
 __all__ = [
     "UndoManager",
+    "get_undo_manager",
     "is_undoable",
     "empty",
     "arguments",

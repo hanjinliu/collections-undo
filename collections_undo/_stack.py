@@ -7,6 +7,7 @@ from typing import (
     Any,
     Callable,
     Generator,
+    Hashable,
     Literal,
     TypeVar,
     overload,
@@ -61,12 +62,25 @@ class UndoManager:
         self,
         *,
         measure: Callable[..., float] = always_zero,
-        maxsize: float | Literal["inf"] = "inf",
+        maxsize: float = float("inf"),
     ):
         self._instances: dict[int, Self] = {}
         if not callable(measure):
             raise TypeError("measure must be callable")
         self._state = ManagerState(measure, float(maxsize))
+
+    def set_state(
+        self,
+        *,
+        measure: Callable[..., float] = always_zero,
+        maxsize: float = float("inf"),
+    ) -> Self:
+        """Set manager state."""
+        if not self.empty:
+            raise RuntimeError("Cannot set state while manager is not empty")
+        self._state.measure = measure
+        self._state.maxsize = float(maxsize)
+        return self
 
     def __repr__(self) -> str:
         cls_name = type(self).__name__
@@ -85,6 +99,10 @@ class UndoManager:
     def __get__(self, obj, objtype=None) -> Self:
         if obj is None:
             return self
+        return self.instance_for(obj)
+
+    def instance_for(self, obj: Any) -> Self:
+        """Get an undo manager instance for an object."""
         _id = id(obj)
         if (stack := self._instances.get(_id, None)) is None:
             self._instances[_id] = stack = type(self)()
@@ -416,3 +434,28 @@ def _join_stack(stack: list, max: int = 10):
         return _splitter.join(["...", s])
     else:
         return _splitter.join(repr(cmd) for cmd in stack)
+
+
+_GLOBAL_UNDO_MANAGERS: dict[Hashable, UndoManager] = {}
+
+
+def get_undo_manager(name: Hashable) -> UndoManager:
+    """
+    Get a global undo manager for the given name, create if not exists.
+
+    Global undo managers are useful for making classes with undoable
+    methods without adding an undo manager as a class attribute. They
+    can also be used to share the same undo/redo stack between multiple
+    functions defined in different files or modules.
+
+    Examples
+    --------
+    >>> mgr = get_undo_manager("myapp")
+    >>> class A:
+    ...     @mgr.undoable
+    ...     def f(self): ...
+    """
+    if mgr := _GLOBAL_UNDO_MANAGERS.get(name):
+        return mgr
+    mgr = _GLOBAL_UNDO_MANAGERS[name] = UndoManager()
+    return mgr
