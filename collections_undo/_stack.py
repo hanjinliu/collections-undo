@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from contextlib import contextmanager
 from functools import wraps
+from inspect import isgeneratorfunction
 from typing import (
     TYPE_CHECKING,
     Any,
@@ -247,6 +248,12 @@ class UndoManager:
 
     @overload
     def undoable(
+        self, f: Callable[_P, Generator[_R, None, _RR]], name: str | None = None
+    ) -> UndoableGenerator[_P, _R, _RR]:
+        ...
+
+    @overload
+    def undoable(
         self, f: Callable[_P, _R], name: str | None = None
     ) -> ReversibleFunction[_P, _R, Any]:
         ...
@@ -261,7 +268,10 @@ class UndoManager:
         f: Literal[None] = None,
         name: str | None = None,
     ) -> (
-        Callable[[Callable[_P, _R]], ReversibleFunction[_P, _R, Any]]
+        Callable[
+            [Callable[_P, Generator[_R, None, _RR]]], UndoableGenerator[_P, _R, _RR]
+        ]
+        | Callable[[Callable[_P, _R]], ReversibleFunction[_P, _R, Any]]
         | Callable[[property], UndoableProperty]
     ):
         ...
@@ -271,7 +281,20 @@ class UndoManager:
 
         def _wrapper(f):
             if isinstance(f, property):
+                if name is not None:
+                    import warnings
+
+                    warnings.warn(
+                        "'name' is ignored for property.",
+                        UserWarning,
+                        stacklevel=2,
+                    )
                 return UndoableProperty.from_property(f, mgr=self)
+            elif isgeneratorfunction(f):
+                gen = UndoableGenerator(f, mgr=self)
+                if name is not None:
+                    gen.__name__ = name
+                return gen
             fn = ReversibleFunction(f, mgr=self)
             if name is not None:
                 fn.__name__ = name
@@ -356,16 +379,25 @@ class UndoManager:
     undef = irreversible  # backward compatible alias
 
     def merge_commands(
-        self, start: int, stop: int, formatter: Callable | None = None
+        self,
+        start: int,
+        stop: int,
+        formatter: Callable | None = None,
+        invert: bool = False,
     ) -> None:
         """Merge a command set into the undo stack."""
-        merged = Command.merge(self._state.stack_undo[start:stop], formatter=formatter)
+        cmds = self._state.stack_undo[start:stop]
+        merged = Command.merge(cmds, formatter=formatter, invert=invert)
         del self._state.stack_undo[start:stop]
         self._state.stack_undo.insert(start, merged)
         return None
 
     @contextmanager
-    def merging(self, formatter: Callable | None = None) -> None:
+    def merging(
+        self,
+        formatter: Callable | None = None,
+        invert: bool = False,
+    ) -> None:
         """Merge all the commands into a single command in this context."""
         if self._state.is_merging:
             yield None
@@ -381,7 +413,9 @@ class UndoManager:
             self._state.is_merging = merging
             if not blocked and not merging:
                 len_after = len(self._state.stack_undo)
-                self.merge_commands(len_before, len_after, formatter=formatter)
+                self.merge_commands(
+                    len_before, len_after, formatter=formatter, invert=invert
+                )
                 self.called.evoke(self._state.stack_undo[-1], CallType.call)
         return None
 

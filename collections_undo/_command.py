@@ -1,8 +1,9 @@
 from __future__ import annotations
+
+import inspect
 from abc import ABC, abstractmethod
 from functools import lru_cache
-from typing import Any, Callable, Iterable, Iterator, TYPE_CHECKING, Mapping
-import inspect
+from typing import TYPE_CHECKING, Any, Callable, Iterable, Iterator, Mapping
 
 from collections_undo._reversible import ReversibleFunction
 
@@ -30,6 +31,11 @@ class _CommandBase(ABC):
     @abstractmethod
     def format(self) -> str:
         """Format the command."""
+
+
+@lru_cache(maxsize=128)
+def _bind_args(self: Command):
+    return inspect.signature(self.func._func_fw).bind(*self.args, **self.kwargs)
 
 
 class Command(_CommandBase):
@@ -81,17 +87,17 @@ class Command(_CommandBase):
         """Return the function id."""
         return self.func.function_id
 
-    @lru_cache(maxsize=128)
     def bind_args(self) -> inspect.BoundArguments:
-        return inspect.signature(self.func._func_fw).bind(*self.args, **self.kwargs)
+        return _bind_args(self)
 
     @classmethod
     def merge(
         cls,
         cmds: Iterable[Command],
         formatter: FormatterType | None = None,
+        invert: bool = False,
     ) -> CommandGroup:
-        group = CommandGroup(cmds, formatter=formatter)
+        group = CommandGroup(cmds, formatter=formatter, invert=invert)
         return group
 
     def format(self, inv: bool = False) -> str:
@@ -102,6 +108,8 @@ class Command(_CommandBase):
         ----------
         inv : bool, default si False
             Format as a reverse command if true.
+
+
         Returns
         -------
         str
@@ -117,7 +125,7 @@ class Command(_CommandBase):
         if rule is None:
             raise ValueError(f"Automerge rule is not defined for {cmd.func}.")
         if self.func is not cmd.func:
-            raise ValueError(f"Cannot merge different functions.")
+            raise ValueError("Cannot merge different functions.")
         _args, _kwargs = rule(
             Arguments(self.bind_args().arguments),
             Arguments(cmd.bind_args().arguments),
@@ -132,12 +140,14 @@ class CommandGroup(_CommandBase):
         self,
         commands: Iterable[_CommandBase],
         formatter: Callable[[Self], str] | None = None,
+        invert: bool = False,
     ):
         self._commands = list(commands)
         if formatter is None:
             self._formatter = type(self)._format_default
         else:
             self._formatter = formatter
+        self._invert = invert
 
     @property
     def commands(self) -> list[_CommandBase]:
@@ -181,8 +191,13 @@ class CommandGroup(_CommandBase):
         return out
 
     def _revert(self) -> Any:
-        for cmd in reversed(self._commands):
-            out = cmd._revert()
+        out = None
+        if self._invert:
+            for cmd in self._commands:
+                out = cmd._revert()
+        else:
+            for cmd in reversed(self._commands):
+                out = cmd._revert()
         return out
 
     @property

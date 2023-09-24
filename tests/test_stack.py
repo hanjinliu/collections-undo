@@ -298,6 +298,45 @@ def test_nested_merge():
     assert state == 3
 
 
+def test_inverted_merge():
+    mgr = UndoManager()
+    state = 0
+    suspended = 0
+
+    @mgr.interface
+    def a(x):
+        nonlocal suspended
+        suspended = x
+
+    @mgr.interface
+    def apply():
+        nonlocal state
+        state = suspended
+
+    def update(x):
+        with mgr.merging(invert=True):
+            a(x)
+            apply()
+
+    @a.server
+    def a(x):
+        return (state,), {}
+
+    @apply.server
+    def apply():
+        return (), {}
+
+    update(1)
+    assert state == 1
+    assert suspended == 1
+    mgr.undo()
+    assert state == 0
+    assert suspended == 0
+    mgr.redo()
+    assert state == 1
+    assert suspended == 1
+
+
 def test_reduce_reversible():
     class A:
         mgr = UndoManager()
@@ -402,7 +441,7 @@ def test_generator():
         def __init__(self) -> None:
             self._state = 0
 
-        @mgr.undoable_gen
+        @mgr.undoable
         def set_state(self, state: int):
             old = self._state
             self._state = state
